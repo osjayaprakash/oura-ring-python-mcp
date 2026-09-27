@@ -90,6 +90,27 @@ def test_local_redirect_is_caught_and_tokens_saved(tmp_path, host):
     assert "Saved Oura tokens" in out.getvalue()
 
 
+@pytest.mark.parametrize("address", ["127.0.0.1", "::1"])
+def test_localhost_redirect_is_caught_over_ipv4_and_ipv6(tmp_path, address):
+    # Browsers resolve `localhost` to either; this one lands on `address`.
+    if address == "::1" and not socket.has_ipv6:
+        pytest.skip("no IPv6")
+    port = free_port()
+    redirect = f"http://localhost:{port}/callback"
+    host = f"[{address}]" if ":" in address else address
+    browser = FakeBrowser(f"http://{host}:{port}/callback", favicon_first=False)
+    api = token_api()
+    run_login(
+        settings_for(tmp_path, redirect),
+        open_browser=browser,
+        out=io.StringIO(),
+        transport=api.transport(),
+        timeout=5,
+    )
+    browser.thread.join()
+    assert TokenStore(tmp_path / "tokens.json").load().access_token == "at-1"
+
+
 def test_browser_that_blocks_until_it_exits(tmp_path):
     # webbrowser.open waits for a $BROWSER command to exit; the redirect must still be served.
     redirect = f"http://localhost:{free_port()}/callback"

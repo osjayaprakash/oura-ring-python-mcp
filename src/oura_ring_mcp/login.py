@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import errno
 import secrets
+import socket
 import threading
 import webbrowser
 from collections.abc import Callable
@@ -20,6 +22,7 @@ from oura_ring_mcp.core.tokens import TokenStore
 
 _LOCAL_HOSTS = {"localhost", "127.0.0.1"}
 _TIMEOUT_SECONDS = 300
+_NO_IPV6 = {errno.EADDRNOTAVAIL, errno.EAFNOSUPPORT}
 
 _DONE_PAGE = (
     b"<!doctype html><meta charset=utf-8><title>oura-ring-mcp</title>"
@@ -49,10 +52,24 @@ def _catches_locally(redirect_uri: str) -> bool:
     return parts.scheme == "http" and parts.hostname in _LOCAL_HOSTS and parts.port is not None
 
 
-class _RedirectCatcher(HTTPServer):
-    """Serves the redirect URI on a background thread until the browser lands on it.
+def _loopback_addresses(host: str) -> list[tuple[str, socket.AddressFamily]]:
+    # Browsers may resolve `localhost` to ::1 or 127.0.0.1, so listen on both.
+    if host == "localhost":
+        return [("127.0.0.1", socket.AF_INET), ("::1", socket.AF_INET6)]
+    return [(host, socket.AF_INET)]
 
-    A thread, because opening the browser can block until it exits (e.g. a $BROWSER
+
+class _LoopbackServer(HTTPServer):
+    def __init__(self, address: tuple[str, int], family: socket.AddressFamily, catcher):
+        self.address_family = family
+        self.catcher: _RedirectCatcher = catcher
+        super().__init__(address, _Handler)
+
+
+class _RedirectCatcher:
+    """Serves the redirect URI on background threads until the browser lands on it.
+
+    Threads, because opening the browser can block until it exits (e.g. a $BROWSER
     command), and the redirect must be answered meanwhile.
     """
 
@@ -60,17 +77,40 @@ class _RedirectCatcher(HTTPServer):
         self.parts = urlsplit(redirect_uri)
         self.captured: str | None = None
         self.done = threading.Event()
-        super().__init__((self.parts.hostname or "localhost", self.parts.port or 80), _Handler)
-        self._thread = threading.Thread(target=self.serve_forever, args=(0.1,), daemon=True)
+        self._servers: list[_LoopbackServer] = []
+        port = self.parts.port or 80
+        try:
+            for host, family in _loopback_addresses(self.parts.hostname or "localhost"):
+                try:
+                    self._servers.append(_LoopbackServer((host, port), family, self))
+                except OSError as exc:
+                    # No IPv6 on this machine: IPv4 alone is enough.
+                    if family is socket.AF_INET6 and exc.errno in _NO_IPV6:
+                        continue
+                    raise
+        except OSError:
+            self._close()
+            raise
+        self._threads = [
+            threading.Thread(target=server.serve_forever, args=(0.1,), daemon=True)
+            for server in self._servers
+        ]
 
     def __enter__(self) -> _RedirectCatcher:
-        self._thread.start()
+        for thread in self._threads:
+            thread.start()
         return self
 
     def __exit__(self, *exc_info: object) -> None:
-        self.shutdown()
-        self._thread.join()
-        self.server_close()
+        for server in self._servers:
+            server.shutdown()
+        for thread in self._threads:
+            thread.join()
+        self._close()
+
+    def _close(self) -> None:
+        for server in self._servers:
+            server.server_close()
 
     def wait(self, timeout: float) -> str:
         if not self.done.wait(timeout) or self.captured is None:
@@ -79,10 +119,11 @@ class _RedirectCatcher(HTTPServer):
 
 
 class _Handler(BaseHTTPRequestHandler):
-    server: _RedirectCatcher
+    server: _LoopbackServer
 
     def do_GET(self) -> None:  # noqa: N802
-        parts = self.server.parts
+        catcher = self.server.catcher
+        parts = catcher.parts
         if urlsplit(self.path).path != (parts.path or "/"):
             self.send_error(404)  # e.g. the browser asking for /favicon.ico
             return
@@ -90,8 +131,8 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("content-type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(_DONE_PAGE)
-        self.server.captured = f"{parts.scheme}://{parts.netloc}{self.path}"
-        self.server.done.set()
+        catcher.captured = f"{parts.scheme}://{parts.netloc}{self.path}"
+        catcher.done.set()
 
     def log_message(self, *args: object) -> None:
         pass  # stdout/stderr stay clean

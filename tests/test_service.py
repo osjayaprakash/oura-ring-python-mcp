@@ -111,3 +111,32 @@ async def test_unexpected_errors_propagate_unchanged():
     client.fail_next["personal_info"] = [KeyError("data")]
     with pytest.raises(KeyError):
         await make_service(client).personal_info()
+
+
+async def test_timezone_sets_today_to_the_users_day():
+    from zoneinfo import ZoneInfo
+
+    client = FakeOuraClient()
+    utc_evening = datetime(2026, 9, 26, 22, 0, tzinfo=UTC)  # already the 27th in Sydney
+    service = OuraService(
+        client,
+        timezone=ZoneInfo("Australia/Sydney"),
+        now=lambda: utc_evening.astimezone(ZoneInfo("Australia/Sydney")),
+    )
+    days, _ = await service.documents(Collection.DAILY_SLEEP, None, None)
+    assert days.end == date(2026, 9, 27)
+
+
+async def test_default_timezone_uses_the_current_date():
+    service = OuraService(FakeOuraClient())
+    days, _ = await service.documents(Collection.DAILY_SLEEP, None, None)
+    assert days.end == datetime.now().astimezone().date()
+
+
+async def test_timezone_applies_to_naive_heart_rate_times():
+    from zoneinfo import ZoneInfo
+
+    client = FakeOuraClient()
+    service = OuraService(client, timezone=ZoneInfo("Asia/Kolkata"), now=lambda: NOW)
+    window, _ = await service.heart_rate("2026-09-26T08:00:00", "2026-09-26T09:00:00")
+    assert window.start.utcoffset().total_seconds() == 5.5 * 3600

@@ -197,6 +197,8 @@ instance you trust, such as a self-hosted one.
 | `Oura sign-in is missing or no longer valid (invalid_client)…` | The client ID or secret is wrong. Copy them again from the developer portal. |
 | `The Oura sign-in doesn't include the \`stress\` scope…` (or another scope) | Allow that scope for the application in the developer portal, then run `oura-ring-mcp auth` again and allow it on Oura's page. |
 | `Oura rejected the access token…` | Run `oura-ring-mcp auth` again. |
+| "Today" is a day behind or ahead, or last night's sleep is missing | The server's time zone differs from yours (Docker defaults to UTC). Set `OURA_TIMEZONE`, e.g. `Europe/London`. |
+| `Could not save refreshed Oura tokens …` in the client's logs | The token folder isn't writable (disk full, permissions, a read-only Docker mount). Fix it before the server restarts, or you'll need to run `auth` again. |
 | `Oura denied access to this data…` | Check the Oura membership is active, and that you allowed that scope when signing in (run `auth` again to change). |
 | `Rate limited by Oura…` | Wait for the time shown, then retry. |
 | `… is not a date; use YYYY-MM-DD.` | Ask with explicit dates, e.g. "sleep from 2026-09-01 to 2026-09-07". |

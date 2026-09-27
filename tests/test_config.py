@@ -86,3 +86,18 @@ def test_langfuse_enabled_only_with_both_keys(public, secret, enabled):
 def test_capture_flag_parsing(raw, expected):
     env = {**CLIENT, "LANGFUSE_CAPTURE_DATA": raw}
     assert load_settings(env).langfuse_capture_data is expected
+
+
+def test_timezone_default_none_and_valid_name():
+    from zoneinfo import ZoneInfo
+
+    assert load_settings(CLIENT).timezone is None
+    assert load_settings({**CLIENT, "OURA_TIMEZONE": "Australia/Sydney"}).timezone == ZoneInfo(
+        "Australia/Sydney"
+    )
+
+
+@pytest.mark.parametrize("name", ["Mars/Olympus", "../etc/passwd"])
+def test_invalid_timezone(name):
+    with pytest.raises(ConfigError, match="OURA_TIMEZONE"):
+        load_settings({**CLIENT, "OURA_TIMEZONE": name})

@@ -92,12 +92,16 @@ class OuraClient:
         raise ResponseShapeError(call)
 
     async def _get(self, path: str, params: dict[str, str], call: str) -> Any:
-        response = await self._send(path, params, refresh=False)
+        token = await self._auth.get()
+        response = await self._send(path, params, token)
         if response.status_code == 401 and (scope := _missing_scope(response)):
             raise MissingScopeError(scope)  # a new token wouldn't help: don't burn a refresh
         if response.status_code == 401 and self._auth.can_refresh:
-            # Revoked or expired early: refresh once and retry.
-            response = await self._send(path, params, refresh=True)
+            # Revoked or expired early: refresh once (unless already replaced) and retry.
+            token = await self._auth.get(refresh=True, stale=token)
+            response = await self._send(path, params, token)
+            if response.status_code == 401 and (scope := _missing_scope(response)):
+                raise MissingScopeError(scope)
         if response.status_code == 401:
             raise AuthenticationError("Oura returned HTTP 401")
         if response.status_code == 403:
@@ -112,8 +116,7 @@ class OuraClient:
         except ValueError:
             raise ResponseShapeError(call) from None
 
-    async def _send(self, path: str, params: dict[str, str], *, refresh: bool) -> httpx2.Response:
-        token = await self._auth.get(refresh=refresh)
+    async def _send(self, path: str, params: dict[str, str], token: str) -> httpx2.Response:
         try:
             return await self._http.get(
                 path, params=params, headers={"authorization": f"Bearer {token}"}

@@ -35,6 +35,10 @@
           "name": "OURA_TOKEN_FILE",
           "description": "Where `oura-ring-mcp auth` saved the OAuth tokens",
           "default": "~/.config/oura-ring-mcp/tokens.json"
+        },
+        {
+          "name": "OURA_TIMEZONE",
+          "description": "Your IANA time zone (e.g. Europe/London), so \"today\" is your day; defaults to the machine's"
         }
       ]
     },
@@ -57,9 +61,24 @@
           "isSecret": true
         },
         {
-          "name": "OURA_TOKEN_FILE",
-          "description": "Where `oura-ring-mcp auth` saved the OAuth tokens",
-          "default": "~/.config/oura-ring-mcp/tokens.json"
+          "name": "OURA_TIMEZONE",
+          "description": "Your IANA time zone (e.g. Europe/London), so \"today\" is your day; defaults to the machine's"
+        }
+      ],
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "-v",
+          "value": "{token_dir}:/tokens",
+          "description": "Mount the folder that holds tokens.json, so the server can read your sign-in and save refreshed tokens",
+          "isRequired": true,
+          "variables": {
+            "token_dir": {
+              "description": "Folder where `oura-ring-mcp auth` saved tokens.json on this machine (usually ~/.config/oura-ring-mcp)",
+              "format": "filepath",
+              "isRequired": true
+            }
+          }
         }
       ]
     }

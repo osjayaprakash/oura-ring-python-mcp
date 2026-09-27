@@ -19,5 +19,8 @@ RUN useradd --create-home app
 COPY --from=build /app/.venv /app/.venv
 USER app
 
+# Mount the folder holding tokens.json (from `oura-ring-mcp auth`) at /tokens.
+ENV OURA_TOKEN_FILE=/tokens/tokens.json
+
 # The server speaks MCP over stdio: run with `docker run -i`.
 ENTRYPOINT ["/app/.venv/bin/oura-ring-mcp"]

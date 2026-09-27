@@ -36,5 +36,23 @@ def test_dockerfile_carries_server_name_label():
     assert label and label.group(1) == SERVER["name"]
 
 
+def _env_names(registry_type: str) -> list[str]:
+    return [e["name"] for e in _package(registry_type)["environmentVariables"]]
+
+
 def test_env_vars_match_between_packages():
-    assert _package("pypi")["environmentVariables"] == _package("oci")["environmentVariables"]
+    # The image fixes OURA_TOKEN_FILE at the mounted /tokens folder.
+    assert [n for n in _env_names("pypi") if n != "OURA_TOKEN_FILE"] == _env_names("oci")
+
+
+def test_env_vars_cover_the_settings():
+    config = (ROOT / "src" / "oura_ring_mcp" / "config.py").read_text()
+    read = set(re.findall(r'env\.get\("(OURA_[A-Z_]+)"', config))
+    assert read == set(_env_names("pypi")) | {"OURA_REDIRECT_URI", "OURA_SCOPES"}
+
+
+def test_docker_image_reads_tokens_from_the_mounted_folder():
+    dockerfile = (ROOT / "Dockerfile").read_text()
+    assert "ENV OURA_TOKEN_FILE=/tokens/tokens.json" in dockerfile
+    [mount] = _package("oci")["runtimeArguments"]
+    assert (mount["name"], mount["value"]) == ("-v", "{token_dir}:/tokens")

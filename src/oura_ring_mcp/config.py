@@ -6,6 +6,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from oura_ring_mcp.core.oauth import DEFAULT_SCOPES
 
@@ -25,6 +26,7 @@ class Settings:
     redirect_uri: str
     scopes: tuple[str, ...]
     token_file: Path
+    timezone: ZoneInfo | None
     langfuse_enabled: bool
     langfuse_capture_data: bool
 
@@ -51,6 +53,14 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     token_file_text = env.get("OURA_TOKEN_FILE", "").strip()
     token_file = Path(token_file_text).expanduser() if token_file_text else _default_token_file(env)
 
+    timezone_name = env.get("OURA_TIMEZONE", "").strip()
+    try:
+        timezone = ZoneInfo(timezone_name) if timezone_name else None
+    except (ZoneInfoNotFoundError, ValueError):
+        raise ConfigError(
+            f"Invalid OURA_TIMEZONE {timezone_name!r}; use an IANA name such as Europe/London."
+        ) from None
+
     langfuse_enabled = bool(
         env.get("LANGFUSE_PUBLIC_KEY", "").strip() and env.get("LANGFUSE_SECRET_KEY", "").strip()
     )
@@ -62,6 +72,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         redirect_uri=redirect_uri,
         scopes=scopes,
         token_file=token_file,
+        timezone=timezone,
         langfuse_enabled=langfuse_enabled,
         langfuse_capture_data=capture,
     )

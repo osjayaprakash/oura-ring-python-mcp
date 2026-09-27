@@ -181,7 +181,7 @@ class RefreshingToken:
     def __init__(self):
         self.refreshes = 0
 
-    async def get(self, *, refresh=False):
+    async def get(self, *, refresh=False, stale=None):
         self.refreshes += refresh
         return f"token-{self.refreshes}"
 
@@ -245,3 +245,36 @@ async def test_other_401_bodies_are_plain_authentication_errors(body):
     async with make_client(api) as client:
         with pytest.raises(AuthenticationError):
             await client.personal_info()
+
+
+async def test_missing_scope_after_refresh_is_still_a_scope_error():
+    api = MockAPI()
+    path = "/v2/usercollection/daily_resilience"
+    api.on("GET", path, status=401, json_body={"detail": "Token expired"})
+    api.on(
+        "GET",
+        path,
+        status=401,
+        json_body={"detail": "Token is not authorized access stress scope."},
+    )
+    async with OuraClient(RefreshingToken(), transport=api.transport()) as client:
+        with pytest.raises(MissingScopeError) as info:
+            await client.documents(Collection.DAILY_RESILIENCE, START, END)
+    assert info.value.scope == "stress"
+
+
+async def test_refresh_is_told_which_token_was_rejected():
+    seen = {}
+
+    class Recording(RefreshingToken):
+        async def get(self, *, refresh=False, stale=None):
+            if refresh:
+                seen["stale"] = stale
+            return await super().get(refresh=refresh)
+
+    api = MockAPI()
+    api.on("GET", PERSONAL_INFO, status=401, json_body={})
+    api.on("GET", PERSONAL_INFO, json_body=fixture("personal_info"))
+    async with OuraClient(Recording(), transport=api.transport()) as client:
+        await client.personal_info()
+    assert seen == {"stale": "token-0"}

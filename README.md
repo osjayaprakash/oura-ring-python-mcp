@@ -65,7 +65,7 @@ the tokens to `~/.config/oura-ring-mcp/tokens.json` (readable only by you):
 OURA_CLIENT_ID=... OURA_CLIENT_SECRET=... uv run oura-ring-mcp auth
 ```
 
-From then on the server refreshes the access token by itself (Oura's last about a day)
+From then on the server refreshes the access token by itself (Oura issues them for 30 days)
 and saves each new single-use refresh token. Run `auth` again only if you revoke access
 or the saved refresh token is lost.
 
@@ -73,7 +73,8 @@ or the saved refresh token is lost.
 |---|---|---|---|
 | `OURA_CLIENT_ID` | yes | | Client ID of your Oura API application |
 | `OURA_CLIENT_SECRET` | yes | | Client secret of your Oura API application |
-| `OURA_TOKEN_FILE` | no | `~/.config/oura-ring-mcp/tokens.json` | Where `auth` saves the tokens and the server reads them |
+| `OURA_TOKEN_FILE` | no | `~/.config/oura-ring-mcp/tokens.json` (under `$XDG_CONFIG_HOME` if set) | Where `auth` saves the tokens and the server reads them |
+| `OURA_TIMEZONE` | no | the machine's time zone | Your IANA time zone, e.g. `Europe/London`, so "today" matches Oura's days. Set it when running in Docker, where the default is UTC |
 | `OURA_REDIRECT_URI` | no | `http://localhost:47651/callback` | Must match a redirect URI of the application exactly |
 | `OURA_SCOPES` | no | `email personal daily heartrate workout session spo2 stress` | Scopes to request |
 
@@ -99,11 +100,13 @@ read the tokens and save refreshed ones. The server speaks MCP over stdio, so ke
 
 ```bash
 docker run -i --rm --user "$(id -u):$(id -g)" \
-  -e OURA_CLIENT_ID -e OURA_CLIENT_SECRET -e OURA_TOKEN_FILE=/tokens/tokens.json \
+  -e OURA_CLIENT_ID -e OURA_CLIENT_SECRET -e OURA_TIMEZONE=Europe/London \
   -v ~/.config/oura-ring-mcp:/tokens \
   ghcr.io/osjayaprakash/oura-ring-mcp:latest
 ```
 
+The image reads the tokens from `/tokens/tokens.json`. `--user` lets the container read
+and update your token file on Linux; Docker Desktop on macOS and Windows doesn't need it.
 To sign in from the container instead, run it with `-it` and the command `auth --paste`.
 
 In a client config, use `"command": "docker"` with those arguments, and pass the

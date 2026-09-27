@@ -16,6 +16,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Check the tag matches server.json, or a manual run is on master
+        run: |
+          version=$(jq -r .version server.json)
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          else
+            [ "$GITHUB_REF_NAME" = master ] || { echo "run manual publishes from master"; exit 1; }
+          fi
       - name: Wait for the PyPI package and the Docker image
         run: |
           version=$(jq -r .version server.json)

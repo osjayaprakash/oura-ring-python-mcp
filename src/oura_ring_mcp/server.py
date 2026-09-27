@@ -47,7 +47,7 @@ StartDatetime = Annotated[
     Field(
         description=(
             "Window start, ISO 8601 (e.g. 2026-09-26T08:00:00+02:00; no offset means the "
-            "server's local time). Omit for 24 hours before end_datetime."
+            "user's time zone). Omit for 24 hours before end_datetime."
         )
     ),
 ]
@@ -234,5 +234,5 @@ def main(argv: list[str] | None = None) -> None:
 
     tracing.configure(settings)
     atexit.register(tracing.shutdown)
-    set_service(OuraService(build_client(settings)))
+    set_service(OuraService(build_client(settings), timezone=settings.timezone))
     mcp.run("stdio")

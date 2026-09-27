@@ -13,11 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - name: Check tag matches pyproject version
-        if: github.ref_type == 'tag'
+      - name: Check the tag matches pyproject, or a manual run is on master
         run: |
           version=$(uv version --short)
-          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          else
+            [ "$GITHUB_REF_NAME" = master ] || { echo "run manual publishes from master"; exit 1; }
+          fi
       - run: uv sync --frozen
       - run: uv run pytest -q
       - run: uv build

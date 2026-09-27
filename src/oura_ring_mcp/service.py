@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, tzinfo
 from typing import Any, Protocol, TypeVar
 
 from mcp.server.mcpserver.exceptions import ToolError
@@ -76,23 +76,27 @@ def resolve_date_range(start: str | None, end: str | None, *, today: date) -> Da
     return DateRange(start_day, end_day)
 
 
-def _parse_datetime(name: str, text: str) -> datetime:
+def _parse_datetime(name: str, text: str, tz: tzinfo | None) -> datetime:
     try:
         value = datetime.fromisoformat(text)
     except ValueError:
         raise ToolError(
             f"{name} {text!r} is not a date-time; use ISO 8601, e.g. 2026-09-26T08:00:00."
         ) from None
-    # No offset given: the caller means the server's local time.
-    return value if value.tzinfo is not None else value.astimezone()
+    if value.tzinfo is not None:
+        return value
+    # No offset given: the user's time zone (OURA_TIMEZONE), else the server's.
+    return value.replace(tzinfo=tz) if tz is not None else value.astimezone()
 
 
-def resolve_time_range(start: str | None, end: str | None, *, now: datetime) -> TimeRange:
+def resolve_time_range(
+    start: str | None, end: str | None, *, now: datetime, tz: tzinfo | None = None
+) -> TimeRange:
     """Heart rate window; defaults to the 24 hours ending now."""
     start_text, end_text = (start or "").strip(), (end or "").strip()
-    end_at = _parse_datetime("end_datetime", end_text) if end_text else now
+    end_at = _parse_datetime("end_datetime", end_text, tz) if end_text else now
     if start_text:
-        start_at = _parse_datetime("start_datetime", start_text)
+        start_at = _parse_datetime("start_datetime", start_text, tz)
     else:
         start_at = end_at - DEFAULT_HEART_RATE_WINDOW
     if start_at >= end_at:
@@ -156,12 +160,16 @@ class OuraService:
         self,
         client: OuraAPI,
         *,
-        today: Callable[[], date] = date.today,
-        now: Callable[[], datetime] = lambda: datetime.now().astimezone(),
+        timezone: tzinfo | None = None,
+        today: Callable[[], date] | None = None,
+        now: Callable[[], datetime] | None = None,
     ) -> None:
+        """`timezone` is the user's zone (Oura's `day` is their local day); None means the
+        server's own, which is UTC in most containers."""
         self._client = client
-        self._today = today
-        self._now = now
+        self._tz = timezone
+        self._now = now or (lambda: datetime.now(timezone).astimezone(timezone))
+        self._today = today or (lambda: self._now().date())
 
     async def personal_info(self) -> PersonalInfo:
         return await self._request("personal_info", self._client.personal_info)
@@ -184,7 +192,7 @@ class OuraService:
     async def heart_rate(
         self, start_datetime: str | None, end_datetime: str | None
     ) -> tuple[TimeRange, list[HeartRateSample]]:
-        window = resolve_time_range(start_datetime, end_datetime, now=self._now())
+        window = resolve_time_range(start_datetime, end_datetime, now=self._now(), tz=self._tz)
         samples = await self._request(
             "heartrate", self._client.heart_rate, window.start, window.end
         )

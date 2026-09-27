@@ -13,14 +13,14 @@ RUN uv sync --frozen --no-dev --no-editable --extra langfuse
 
 FROM python:3.12-slim-bookworm
 
-LABEL io.modelcontextprotocol.server.name="io.github.osjayaprakash/oura-ring-mcp"
+LABEL io.modelcontextprotocol.server.name="io.github.osjayaprakash/oura-ring-python-mcp"
 
 RUN useradd --create-home app
 COPY --from=build /app/.venv /app/.venv
 USER app
 
-# Mount the folder holding tokens.json (from `oura-ring-mcp auth`) at /tokens.
+# Mount the folder holding tokens.json (from `oura-ring-python-mcp auth`) at /tokens.
 ENV OURA_TOKEN_FILE=/tokens/tokens.json
 
 # The server speaks MCP over stdio: run with `docker run -i`.
-ENTRYPOINT ["/app/.venv/bin/oura-ring-mcp"]
+ENTRYPOINT ["/app/.venv/bin/oura-ring-python-mcp"]

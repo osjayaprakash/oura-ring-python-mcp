@@ -532,7 +532,7 @@ wheels = [
 ]
 
 [[package]]
-name = "oura-ring-mcp"
+name = "oura-ring-python-mcp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

@@ -68,15 +68,15 @@ async def test_heart_rate_uses_resolved_window():
 @pytest.mark.parametrize(
     "error, message",
     [
-        (AuthenticationError("401"), "Run `oura-ring-mcp auth` to sign in again."),
+        (AuthenticationError("401"), "Run `oura-ring-python-mcp auth` to sign in again."),
         (
             MissingScopeError("stress"),
             "Allow `stress` for the application (and in OURA_SCOPES if you set it), "
-            "then run `oura-ring-mcp auth` again.",
+            "then run `oura-ring-python-mcp auth` again.",
         ),
         (
             AuthorizationError("invalid_grant"),
-            "(invalid_grant). Run `oura-ring-mcp auth` to sign in again.",
+            "(invalid_grant). Run `oura-ring-python-mcp auth` to sign in again.",
         ),
         (AccessDeniedError("403"), "or the token lacks the scope for it."),
         (RateLimitError(30), "Try again in 30 seconds."),

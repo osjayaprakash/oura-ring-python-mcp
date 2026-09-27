@@ -1,4 +1,4 @@
-"""`oura-ring-mcp auth`: sign in to Oura once in the browser and save the OAuth tokens."""
+"""`oura-ring-python-mcp auth`: sign in to Oura once in the browser and save the OAuth tokens."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ _LOCAL_HOSTS = {"localhost", "127.0.0.1"}
 _TIMEOUT_SECONDS = 300
 
 _DONE_PAGE = (
-    b"<!doctype html><meta charset=utf-8><title>oura-ring-mcp</title>"
+    b"<!doctype html><meta charset=utf-8><title>oura-ring-python-mcp</title>"
     b"<p>Oura sign-in received. You can close this tab and return to the terminal.</p>"
 )
 

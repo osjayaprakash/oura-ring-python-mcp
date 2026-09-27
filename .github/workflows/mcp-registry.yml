@@ -29,13 +29,13 @@ jobs:
           version=$(jq -r .version server.json)
           image=$(jq -r '.packages[] | select(.registryType == "oci") | .identifier' server.json)
           for _ in $(seq 60); do
-            if curl -sf "https://pypi.org/pypi/oura-ring-mcp/$version/json" >/dev/null \
+            if curl -sf "https://pypi.org/pypi/oura-ring-python-mcp/$version/json" >/dev/null \
               && docker manifest inspect "$image" >/dev/null 2>&1; then
               exit 0
             fi
             sleep 30
           done
-          echo "oura-ring-mcp $version or $image not published after 30 minutes"
+          echo "oura-ring-python-mcp $version or $image not published after 30 minutes"
           exit 1
       - name: Install mcp-publisher
         run: |

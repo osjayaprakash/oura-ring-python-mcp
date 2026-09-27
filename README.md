@@ -1,12 +1,12 @@
-# oura-ring-mcp
+# oura-ring-python-mcp
 
-<!-- mcp-name: io.github.osjayaprakash/oura-ring-mcp -->
+<!-- mcp-name: io.github.osjayaprakash/oura-ring-python-mcp -->
 
-[![CI](https://github.com/osjayaprakash/oura-ring-mcp/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/osjayaprakash/oura-ring-mcp/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/oura-ring-mcp)](https://pypi.org/project/oura-ring-mcp/)
-[![Python](https://img.shields.io/pypi/pyversions/oura-ring-mcp)](https://pypi.org/project/oura-ring-mcp/)
-[![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/osjayaprakash/oura-ring-mcp/pkgs/container/oura-ring-mcp)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/osjayaprakash/oura-ring-mcp/blob/master/LICENSE)
+[![CI](https://github.com/osjayaprakash/oura-ring-python-mcp/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/osjayaprakash/oura-ring-python-mcp/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/oura-ring-python-mcp)](https://pypi.org/project/oura-ring-python-mcp/)
+[![Python](https://img.shields.io/pypi/pyversions/oura-ring-python-mcp)](https://pypi.org/project/oura-ring-python-mcp/)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/osjayaprakash/oura-ring-python-mcp/pkgs/container/oura-ring-python-mcp)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/osjayaprakash/oura-ring-python-mcp/blob/master/LICENSE)
 
 An MCP server that gives Claude (or any MCP client) read-only access to your Oura Ring
 data: sleep, readiness, activity, stress, SpO2, resilience, workouts, sessions and heart
@@ -43,8 +43,8 @@ averages are kept.
 ## Setup
 
 For a step-by-step guide, including creating the Oura application and troubleshooting,
-see the [installation guide](https://oura-ring-mcp.readthedocs.io/en/latest/install/).
-Full documentation is at <https://oura-ring-mcp.readthedocs.io>.
+see the [installation guide](https://oura-ring-python-mcp.readthedocs.io/en/latest/install/).
+Full documentation is at <https://oura-ring-python-mcp.readthedocs.io>.
 
 The server signs in with OAuth2, since Oura has deprecated personal access tokens. You
 need an Oura API application (a client ID and secret) whose redirect URIs include
@@ -54,7 +54,7 @@ need an Oura API application (a client ID and secret) whose redirect URIs includ
 membership for the API to return data.
 
 ```bash
-git clone https://github.com/osjayaprakash/oura-ring-mcp.git && cd oura-ring-mcp
+git clone https://github.com/osjayaprakash/oura-ring-python-mcp.git && cd oura-ring-python-mcp
 uv sync
 ```
 
@@ -62,7 +62,7 @@ Sign in once. This opens the browser, catches Oura's redirect on localhost, and 
 the tokens to `~/.config/oura-ring-mcp/tokens.json` (readable only by you):
 
 ```bash
-OURA_CLIENT_ID=... OURA_CLIENT_SECRET=... uv run oura-ring-mcp auth
+OURA_CLIENT_ID=... OURA_CLIENT_SECRET=... uv run oura-ring-python-mcp auth
 ```
 
 From then on the server refreshes the access token by itself (Oura issues them for 30 days)
@@ -87,11 +87,11 @@ that with `auth --paste`.
 No clone needed; [uv](https://docs.astral.sh/uv/) fetches and runs the published package:
 
 ```bash
-OURA_CLIENT_ID=... OURA_CLIENT_SECRET=... uvx oura-ring-mcp auth   # once
-uvx oura-ring-mcp
+OURA_CLIENT_ID=... OURA_CLIENT_SECRET=... uvx oura-ring-python-mcp auth   # once
+uvx oura-ring-python-mcp
 ```
 
-In a client config, use `"command": "uvx", "args": ["oura-ring-mcp"]`.
+In a client config, use `"command": "uvx", "args": ["oura-ring-python-mcp"]`.
 
 ### Run with Docker
 
@@ -102,7 +102,7 @@ read the tokens and save refreshed ones. The server speaks MCP over stdio, so ke
 docker run -i --rm --user "$(id -u):$(id -g)" \
   -e OURA_CLIENT_ID -e OURA_CLIENT_SECRET -e OURA_TIMEZONE=Europe/London \
   -v ~/.config/oura-ring-mcp:/tokens \
-  ghcr.io/osjayaprakash/oura-ring-mcp:latest
+  ghcr.io/osjayaprakash/oura-ring-python-mcp:latest
 ```
 
 The image reads the tokens from `/tokens/tokens.json`. `--user` lets the container read
@@ -121,7 +121,7 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "oura": {
       "command": "uv",
-      "args": ["--directory", "/absolute/path/to/oura-ring-mcp", "run", "oura-ring-mcp"],
+      "args": ["--directory", "/absolute/path/to/oura-ring-python-mcp", "run", "oura-ring-python-mcp"],
       "env": {
         "OURA_CLIENT_ID": "your-client-id",
         "OURA_CLIENT_SECRET": "your-client-secret"
@@ -137,7 +137,7 @@ Add to `claude_desktop_config.json`:
 claude mcp add oura \
   -e OURA_CLIENT_ID=your-client-id \
   -e OURA_CLIENT_SECRET=your-client-secret \
-  -- uv --directory /absolute/path/to/oura-ring-mcp run oura-ring-mcp
+  -- uv --directory /absolute/path/to/oura-ring-python-mcp run oura-ring-python-mcp
 ```
 
 ## Langfuse tracing (optional)
@@ -149,8 +149,8 @@ Install the extra and set the keys:
 uv sync --extra langfuse
 ```
 
-In the server command, use `run --extra langfuse oura-ring-mcp` instead of
-`run oura-ring-mcp`.
+In the server command, use `run --extra langfuse oura-ring-python-mcp` instead of
+`run oura-ring-python-mcp`.
 
 | Variable | Meaning |
 |---|---|
@@ -182,9 +182,9 @@ git tag v0.1.0 && git push origin v0.1.0
 ```
 
 The tag publishes to PyPI (`pypi.yml`, needs the `PYPI_API_TOKEN` secret), to
-`ghcr.io/osjayaprakash/oura-ring-mcp` (`docker.yml`), and then to the
+`ghcr.io/osjayaprakash/oura-ring-python-mcp` (`docker.yml`), and then to the
 [MCP Registry](https://registry.modelcontextprotocol.io) (`mcp-registry.yml`).
 
 ## License
 
-[MIT](https://github.com/osjayaprakash/oura-ring-mcp/blob/master/LICENSE)
+[MIT](https://github.com/osjayaprakash/oura-ring-python-mcp/blob/master/LICENSE)

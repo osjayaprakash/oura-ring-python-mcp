@@ -1,4 +1,4 @@
-# Installing oura-ring-mcp
+# Installing oura-ring-python-mcp
 
 This guide takes you from nothing to asking Claude "how did I sleep last night?". It takes
 about 15 minutes, most of it creating the Oura application.
@@ -48,8 +48,8 @@ application you register. Only you will use it, so the details can be simple.
 ## 3. Download and install
 
 ```bash
-git clone https://github.com/osjayaprakash/oura-ring-mcp.git
-cd oura-ring-mcp
+git clone https://github.com/osjayaprakash/oura-ring-python-mcp.git
+cd oura-ring-python-mcp
 uv sync
 ```
 
@@ -64,7 +64,7 @@ pwd
 ```bash
 OURA_CLIENT_ID='your-client-id' \
 OURA_CLIENT_SECRET='your-client-secret' \
-uv run oura-ring-mcp auth
+uv run oura-ring-python-mcp auth
 ```
 
 Your browser opens Oura's sign-in page. Sign in and allow access; the page then says
@@ -94,7 +94,7 @@ On Windows (PowerShell), set the variables first:
 ```powershell
 $env:OURA_CLIENT_ID = "your-client-id"
 $env:OURA_CLIENT_SECRET = "your-client-secret"
-uv run oura-ring-mcp auth
+uv run oura-ring-python-mcp auth
 uv run pytest -m live -q
 ```
 
@@ -122,7 +122,7 @@ uv run pytest -m live -q
      "mcpServers": {
        "oura": {
          "command": "/Users/you/.local/bin/uv",
-         "args": ["--directory", "/Users/you/oura-ring-mcp", "run", "oura-ring-mcp"],
+         "args": ["--directory", "/Users/you/oura-ring-python-mcp", "run", "oura-ring-python-mcp"],
          "env": {
            "OURA_CLIENT_ID": "your-client-id",
            "OURA_CLIENT_SECRET": "your-client-secret"
@@ -133,7 +133,7 @@ uv run pytest -m live -q
    ```
 
    On Windows, double every backslash in paths, for example
-   `"C:\\Users\\you\\oura-ring-mcp"`.
+   `"C:\\Users\\you\\oura-ring-python-mcp"`.
 
 4. Quit Claude Desktop completely and reopen it. The `oura` tools should appear in the
    tools menu.
@@ -144,7 +144,7 @@ uv run pytest -m live -q
 claude mcp add oura \
   -e OURA_CLIENT_ID=your-client-id \
   -e OURA_CLIENT_SECRET=your-client-secret \
-  -- uv --directory /Users/you/oura-ring-mcp run oura-ring-mcp
+  -- uv --directory /Users/you/oura-ring-python-mcp run oura-ring-python-mcp
 ```
 
 This adds the server to the current project only. Add `--scope user` after `add` to make
@@ -156,7 +156,7 @@ Run this command with `OURA_CLIENT_ID` and `OURA_CLIENT_SECRET` set; it speaks M
 stdio:
 
 ```bash
-uv --directory /path/to/oura-ring-mcp run oura-ring-mcp
+uv --directory /path/to/oura-ring-python-mcp run oura-ring-python-mcp
 ```
 
 ## 6. Try it
@@ -176,7 +176,7 @@ Data appears only after the ring has synced with the Oura app.
 To send a trace of each tool call to [Langfuse](https://langfuse.com):
 
 1. Install the extra: `uv sync --extra langfuse`.
-2. In the client config, change `run oura-ring-mcp` to `run --extra langfuse oura-ring-mcp`.
+2. In the client config, change `run oura-ring-python-mcp` to `run --extra langfuse oura-ring-python-mcp`.
 3. Add `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` to the server's `env`, plus
    `LANGFUSE_BASE_URL` if you don't use Langfuse Cloud.
 
@@ -189,14 +189,14 @@ instance you trust, such as a self-hosted one.
 | Message | What to do |
 |---|---|
 | `Missing required environment variable(s): OURA_CLIENT_ID …` | The client isn't passing the credentials. Check the `env` block (Claude Desktop) or `-e` flags (Claude Code). |
-| `Not signed in to Oura (no …tokens.json). Run \`oura-ring-mcp auth\` first.` | Do step 4 with the same `OURA_TOKEN_FILE` (if you set one) as the client config. |
+| `Not signed in to Oura (no …tokens.json). Run \`oura-ring-python-mcp auth\` first.` | Do step 4 with the same `OURA_TOKEN_FILE` (if you set one) as the client config. |
 | The Oura page says the redirect URI is invalid | The application's redirect URIs must include `http://localhost:47651/callback` exactly (or whatever `OURA_REDIRECT_URI` is). |
 | `Cannot listen on http://localhost:47651/callback …` | Something else uses port 47651. Stop it, or add another redirect URI to the application with a free port and set `OURA_REDIRECT_URI` to it, or use `auth --paste`. |
 | `Oura did not authorize access: access_denied.` | You clicked deny on Oura's page. Run `auth` again and allow access. |
-| `Oura sign-in is missing or no longer valid (invalid_grant)…` | The saved refresh token was revoked, already used by another copy of the token file, or expired. Run `oura-ring-mcp auth` again. |
+| `Oura sign-in is missing or no longer valid (invalid_grant)…` | The saved refresh token was revoked, already used by another copy of the token file, or expired. Run `oura-ring-python-mcp auth` again. |
 | `Oura sign-in is missing or no longer valid (invalid_client)…` | The client ID or secret is wrong. Copy them again from the developer portal. |
-| `The Oura sign-in doesn't include the \`stress\` scope…` (or another scope) | Allow that scope for the application in the developer portal, then run `oura-ring-mcp auth` again and allow it on Oura's page. |
-| `Oura rejected the access token…` | Run `oura-ring-mcp auth` again. |
+| `The Oura sign-in doesn't include the \`stress\` scope…` (or another scope) | Allow that scope for the application in the developer portal, then run `oura-ring-python-mcp auth` again and allow it on Oura's page. |
+| `Oura rejected the access token…` | Run `oura-ring-python-mcp auth` again. |
 | "Today" is a day behind or ahead, or last night's sleep is missing | The server's time zone differs from yours (Docker defaults to UTC). Set `OURA_TIMEZONE`, e.g. `Europe/London`. |
 | `Could not save refreshed Oura tokens …` in the client's logs | The token folder isn't writable (disk full, permissions, a read-only Docker mount). Fix it before the server restarts, or you'll need to run `auth` again. |
 | `Oura denied access to this data…` | Check the Oura membership is active, and that you allowed that scope when signing in (run `auth` again to change). |
@@ -210,7 +210,7 @@ instance you trust, such as a self-hosted one.
 ## Updating
 
 ```bash
-cd /path/to/oura-ring-mcp
+cd /path/to/oura-ring-python-mcp
 git pull
 uv sync
 ```
@@ -221,7 +221,7 @@ Then restart your MCP client.
 
 1. Remove the `oura` entry from `claude_desktop_config.json`, or run
    `claude mcp remove oura`.
-2. Delete the `oura-ring-mcp` folder and `~/.config/oura-ring-mcp/`.
+2. Delete the `oura-ring-python-mcp` folder and `~/.config/oura-ring-mcp/`.
 3. Revoke the application's access in your Oura account settings, or delete the
    application in the developer portal.
 

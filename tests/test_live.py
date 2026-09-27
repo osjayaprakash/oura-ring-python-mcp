@@ -1,6 +1,6 @@
 """Hits the real Oura API. Run with: uv run pytest -m live
 
-Needs OURA_CLIENT_ID and OURA_CLIENT_SECRET, and `oura-ring-mcp auth` run first.
+Needs OURA_CLIENT_ID and OURA_CLIENT_SECRET, and `oura-ring-python-mcp auth` run first.
 """
 
 import pytest

@@ -1,5 +1,5 @@
 [project]
-name = "oura-ring-mcp"
+name = "oura-ring-python-mcp"
 version = "0.1.0"
 description = "MCP server exposing Oura Ring sleep, readiness, activity and heart rate data"
 readme = "README.md"
@@ -23,15 +23,15 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/osjayaprakash/oura-ring-mcp"
-Documentation = "https://oura-ring-mcp.readthedocs.io"
-Issues = "https://github.com/osjayaprakash/oura-ring-mcp/issues"
+Homepage = "https://github.com/osjayaprakash/oura-ring-python-mcp"
+Documentation = "https://oura-ring-python-mcp.readthedocs.io"
+Issues = "https://github.com/osjayaprakash/oura-ring-python-mcp/issues"
 
 [project.optional-dependencies]
 langfuse = ["langfuse>=4,<5"]
 
 [project.scripts]
-oura-ring-mcp = "oura_ring_mcp.server:main"
+oura-ring-python-mcp = "oura_ring_mcp.server:main"
 
 [dependency-groups]
 dev = [
@@ -56,7 +56,7 @@ asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-m 'not live'"
-markers = ["live: calls the real Oura API (needs `oura-ring-mcp auth` first)"]
+markers = ["live: calls the real Oura API (needs `oura-ring-python-mcp auth` first)"]
 
 [tool.ruff]
 line-length = 100

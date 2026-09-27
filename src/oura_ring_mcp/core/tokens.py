@@ -200,8 +200,8 @@ class OAuthTokens:
             self._store.save(self._tokens)
         except OSError as exc:
             log.warning(
-                "Could not save refreshed Oura tokens to %s (%s); will retry. "
-                "If the server stops before a save succeeds, run `oura-ring-mcp auth` again.",
+                "Could not save refreshed Oura tokens to %s (%s); will retry. If the server "
+                "stops before a save succeeds, run `oura-ring-python-mcp auth` again.",
                 self._store.path,
                 exc.strerror or type(exc).__name__,
             )

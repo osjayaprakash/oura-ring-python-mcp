@@ -1,11 +1,11 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.osjayaprakash/oura-ring-mcp",
+  "name": "io.github.osjayaprakash/oura-ring-python-mcp",
   "title": "Oura Ring",
   "description": "Read-only Oura Ring sleep, readiness, activity, stress and heart rate data (OAuth2)",
-  "websiteUrl": "https://oura-ring-mcp.readthedocs.io",
+  "websiteUrl": "https://oura-ring-python-mcp.readthedocs.io",
   "repository": {
-    "url": "https://github.com/osjayaprakash/oura-ring-mcp",
+    "url": "https://github.com/osjayaprakash/oura-ring-python-mcp",
     "source": "github"
   },
   "version": "0.1.0",
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
-      "identifier": "oura-ring-mcp",
+      "identifier": "oura-ring-python-mcp",
       "version": "0.1.0",
       "runtimeHint": "uvx",
       "transport": {
@@ -33,7 +33,7 @@
         },
         {
           "name": "OURA_TOKEN_FILE",
-          "description": "Where `oura-ring-mcp auth` saved the OAuth tokens",
+          "description": "Where `oura-ring-python-mcp auth` saved the OAuth tokens",
           "default": "~/.config/oura-ring-mcp/tokens.json"
         },
         {
@@ -44,7 +44,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/osjayaprakash/oura-ring-mcp:0.1.0",
+      "identifier": "ghcr.io/osjayaprakash/oura-ring-python-mcp:0.1.0",
       "transport": {
         "type": "stdio"
       },
@@ -74,7 +74,7 @@
           "isRequired": true,
           "variables": {
             "token_dir": {
-              "description": "Folder where `oura-ring-mcp auth` saved tokens.json on this machine (usually ~/.config/oura-ring-mcp)",
+              "description": "Folder where `oura-ring-python-mcp auth` saved tokens.json on this machine (usually ~/.config/oura-ring-mcp)",
               "format": "filepath",
               "isRequired": true
             }

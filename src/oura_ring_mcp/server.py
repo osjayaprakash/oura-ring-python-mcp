@@ -184,7 +184,7 @@ def build_client(settings: Settings) -> OuraClient:
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        prog="oura-ring-mcp", description="MCP server for Oura Ring data (stdio)."
+        prog="oura-ring-python-mcp", description="MCP server for Oura Ring data (stdio)."
     )
     commands = parser.add_subparsers(dest="command")
     auth = commands.add_parser("auth", help="sign in to Oura in the browser and save tokens")
@@ -197,7 +197,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def _fail(message: object) -> None:
-    print(f"oura-ring-mcp: {message}", file=sys.stderr)
+    print(f"oura-ring-python-mcp: {message}", file=sys.stderr)
     sys.exit(1)
 
 
@@ -230,7 +230,10 @@ def main(argv: list[str] | None = None) -> None:
     except ConfigError as exc:
         _fail(exc)
     if not settings.token_file.exists():
-        _fail(f"Not signed in to Oura (no {settings.token_file}). Run `oura-ring-mcp auth` first.")
+        _fail(
+            f"Not signed in to Oura (no {settings.token_file}). "
+            "Run `oura-ring-python-mcp auth` first."
+        )
 
     tracing.configure(settings)
     atexit.register(tracing.shutdown)

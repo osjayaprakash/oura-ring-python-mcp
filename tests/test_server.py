@@ -114,7 +114,7 @@ async def test_main_exits_when_oauth_not_signed_in(monkeypatch, capsys, tmp_path
     assert info.value.code == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "Run `oura-ring-mcp auth` first" in captured.err
+    assert "Run `oura-ring-python-mcp auth` first" in captured.err
 
 
 async def test_auth_command_needs_client_credentials(monkeypatch, capsys):

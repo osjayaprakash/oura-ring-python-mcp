@@ -47,9 +47,22 @@ def test_documents_drop_interval_series_but_keep_summaries():
         "movement_30_sec": "1121",
     }
     activity = {"day": "2026-09-25", "steps": 9000, "class_5_min": "0012", "met": {"items": []}}
-    items = documents_response(DAYS, [sleep, activity])["items"]
+    session = {
+        "day": "2026-09-25",
+        "mood": "good",
+        "contributors": {"items": "not a series"},
+        "heart_rate_variability": {"interval": 5, "items": [40, None]},
+        "motion_count": {"interval": 5, "items": [0, 1]},
+        "app_sleep_phase_5_min": "4422",
+    }
+    items = documents_response(DAYS, [sleep, activity, session])["items"]
     assert items[0] == {"day": "2026-09-25", "average_heart_rate": 54.5}
     assert items[1] == {"day": "2026-09-25", "steps": 9000}
+    assert items[2] == {
+        "day": "2026-09-25",
+        "mood": "good",
+        "contributors": {"items": "not a series"},
+    }
 
 
 def test_documents_empty():

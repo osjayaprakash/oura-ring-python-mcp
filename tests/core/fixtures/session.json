@@ -1,0 +1,5 @@
+{"data": [{"id": "se-1", "day": "2026-09-25", "type": "breathing", "mood": "good",
+  "start_datetime": "2026-09-25T21:00:00+02:00", "end_datetime": "2026-09-25T21:10:00+02:00",
+  "heart_rate": {"interval": 5, "items": [60, 58, null], "timestamp": "2026-09-25T21:00:00+02:00"},
+  "heart_rate_variability": {"interval": 5, "items": [45, 50], "timestamp": "2026-09-25T21:00:00+02:00"},
+  "motion_count": {"interval": 5, "items": [0, 0, 1], "timestamp": "2026-09-25T21:00:00+02:00"}}], "next_token": null}

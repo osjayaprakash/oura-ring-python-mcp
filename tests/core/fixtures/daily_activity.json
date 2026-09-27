@@ -1,0 +1,12 @@
+{"data": [
+  {"id": "da-1", "day": "2026-09-25", "score": 88, "timestamp": "2026-09-25T04:00:00+02:00",
+   "active_calories": 540, "total_calories": 2610, "target_calories": 500, "steps": 11234,
+   "equivalent_walking_distance": 9800, "meters_to_target": 0, "target_meters": 9000,
+   "average_met_minutes": 1.6, "high_activity_met_minutes": 30, "medium_activity_met_minutes": 120,
+   "low_activity_met_minutes": 200, "sedentary_met_minutes": 10, "high_activity_time": 900,
+   "medium_activity_time": 3600, "low_activity_time": 10800, "sedentary_time": 28800,
+   "resting_time": 30000, "non_wear_time": 0, "inactivity_alerts": 1,
+   "contributors": {"meet_daily_targets": 90, "move_every_hour": 95, "recovery_time": 100,
+                    "stay_active": 80, "training_frequency": 85, "training_volume": 90},
+   "class_5_min": "0001112223", "met": {"interval": 60, "items": [0.9, 1.2, 3.4], "timestamp": "2026-09-25T04:00:00+02:00"}}
+], "next_token": null}

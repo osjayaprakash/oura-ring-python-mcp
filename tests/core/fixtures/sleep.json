@@ -1,10 +1,53 @@
-{"data": [
-  {"id": "sl-1", "day": "2026-09-25", "type": "long_sleep",
-   "bedtime_start": "2026-09-24T23:10:00+02:00", "bedtime_end": "2026-09-25T07:05:00+02:00",
-   "total_sleep_duration": 26100, "deep_sleep_duration": 5400, "light_sleep_duration": 14700,
-   "rem_sleep_duration": 6000, "awake_time": 2400, "efficiency": 92, "latency": 600,
-   "average_heart_rate": 54.5, "lowest_heart_rate": 48, "average_hrv": 61,
-   "heart_rate": {"interval": 300, "items": [60, 58, 55], "timestamp": "2026-09-24T23:10:00+02:00"},
-   "hrv": {"interval": 300, "items": [50, 62, 70], "timestamp": "2026-09-24T23:10:00+02:00"},
-   "sleep_phase_5_min": "4422221111", "movement_30_sec": "1111211111"}
-], "next_token": null}
+{
+ "data": [
+  {
+   "id": "sl-1",
+   "day": "2026-09-25",
+   "type": "long_sleep",
+   "bedtime_start": "2026-09-24T23:10:00+02:00",
+   "bedtime_end": "2026-09-25T07:05:00+02:00",
+   "total_sleep_duration": 26100,
+   "deep_sleep_duration": 5400,
+   "light_sleep_duration": 14700,
+   "rem_sleep_duration": 6000,
+   "awake_time": 2400,
+   "efficiency": 92,
+   "latency": 600,
+   "average_heart_rate": 54.5,
+   "lowest_heart_rate": 48,
+   "average_hrv": 61,
+   "heart_rate": {
+    "interval": 300,
+    "items": [
+     60,
+     58,
+     55
+    ],
+    "timestamp": "2026-09-24T23:10:00+02:00"
+   },
+   "hrv": {
+    "interval": 300,
+    "items": [
+     50,
+     62,
+     70
+    ],
+    "timestamp": "2026-09-24T23:10:00+02:00"
+   },
+   "sleep_phase_5_min": "4422221111",
+   "movement_30_sec": "1111211111",
+   "period": 0,
+   "time_in_bed": 28500,
+   "low_battery_alert": false,
+   "app_sleep_phase_5_min": "4422221111",
+   "readiness": {
+    "score": 81,
+    "contributors": {},
+    "temperature_deviation": -0.12
+   },
+   "readiness_score_delta": 0,
+   "sleep_score_delta": 0
+  }
+ ],
+ "next_token": null
+}

@@ -8,12 +8,23 @@ from typing import Any
 from oura_ring_mcp.core import HeartRateSample, PersonalInfo
 from oura_ring_mcp.service import DateRange, TimeRange
 
-# Per-interval series (5-minute activity classes, MET, sleep phases, in-sleep heart rate
-# and HRV). They dwarf the scores and totals, so they are left out of tool results.
+# Per-interval series dwarf the scores and totals, so they are left out of tool results:
+# string-encoded ones listed here, plus every sample object ({interval, items, timestamp}),
+# such as MET, in-sleep heart rate and HRV, and session motion.
 _SERIES_FIELDS = frozenset(
-    {"class_5_min", "met", "sleep_phase_5_min", "sleep_phase_30_sec", "movement_30_sec"}
+    {
+        "class_5_min",
+        "sleep_phase_5_min",
+        "sleep_phase_30_sec",
+        "app_sleep_phase_5_min",
+        "movement_30_sec",
+    }
 )
-_SAMPLE_OBJECTS = frozenset({"heart_rate", "hrv"})
+
+
+def _is_sample(value: Any) -> bool:
+    return isinstance(value, dict) and isinstance(value.get("items"), list)
+
 
 # Within a day, order documents by when they started.
 _START_FIELDS = ("bedtime_start", "start_datetime", "timestamp")
@@ -27,7 +38,7 @@ def _compact(document: dict[str, Any]) -> dict[str, Any]:
     return {
         key: value
         for key, value in document.items()
-        if key not in _SERIES_FIELDS and not (key in _SAMPLE_OBJECTS and isinstance(value, dict))
+        if key not in _SERIES_FIELDS and not _is_sample(value)
     }
 
 

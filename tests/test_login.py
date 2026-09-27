@@ -16,6 +16,15 @@ from tests.core.mock_api import MockAPI
 GRANT = {"access_token": "at-1", "expires_in": 86400, "refresh_token": "rt-1"}
 
 
+def _ipv6_loopback() -> bool:
+    try:
+        with socket.socket(socket.AF_INET6) as s:
+            s.bind(("::1", 0))
+        return True
+    except OSError:
+        return False
+
+
 def free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -93,8 +102,8 @@ def test_local_redirect_is_caught_and_tokens_saved(tmp_path, host):
 @pytest.mark.parametrize("address", ["127.0.0.1", "::1"])
 def test_localhost_redirect_is_caught_over_ipv4_and_ipv6(tmp_path, address):
     # Browsers resolve `localhost` to either; this one lands on `address`.
-    if address == "::1" and not socket.has_ipv6:
-        pytest.skip("no IPv6")
+    if address == "::1" and not _ipv6_loopback():
+        pytest.skip("no IPv6 loopback")
     port = free_port()
     redirect = f"http://localhost:{port}/callback"
     host = f"[{address}]" if ":" in address else address
@@ -109,6 +118,54 @@ def test_localhost_redirect_is_caught_over_ipv4_and_ipv6(tmp_path, address):
     )
     browser.thread.join()
     assert TokenStore(tmp_path / "tokens.json").load().access_token == "at-1"
+
+
+def test_ipv6_port_taken_elsewhere_still_signs_in_over_ipv4(tmp_path):
+    if not _ipv6_loopback():
+        pytest.skip("no IPv6 loopback")
+    port = free_port()
+    with socket.socket(socket.AF_INET6) as other:
+        other.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+        other.bind(("::1", port))
+        other.listen()
+        redirect = f"http://localhost:{port}/callback"
+        browser = FakeBrowser(f"http://127.0.0.1:{port}/callback", favicon_first=False)
+        api = token_api()
+        run_login(
+            settings_for(tmp_path, redirect),
+            open_browser=browser,
+            out=io.StringIO(),
+            transport=api.transport(),
+            timeout=5,
+        )
+        browser.thread.join()
+    assert TokenStore(tmp_path / "tokens.json").load().access_token == "at-1"
+
+
+def test_first_redirect_wins_over_a_later_one():
+    from oura_ring_mcp.login import _RedirectCatcher
+
+    catcher = _RedirectCatcher(f"http://127.0.0.1:{free_port()}/callback")
+    try:
+        catcher.record("http://x/callback?code=first&state=s")
+        catcher.record("http://x/callback?code=second&state=s")
+        assert catcher.wait(0.1).endswith("code=first&state=s")
+    finally:
+        catcher._close()
+
+
+@pytest.mark.parametrize("uri", ["http://localhost:0/callback", "http://localhost/callback"])
+def test_redirect_without_a_real_port_uses_paste(tmp_path, uri):
+    opened: list[str] = []
+    api = token_api()
+    run_login(
+        settings_for(tmp_path, uri),
+        open_browser=opened.append,
+        read_line=lambda prompt: f"{uri}?code=c&state={state_of(opened[0])}",
+        out=io.StringIO(),
+        transport=api.transport(),
+    )
+    assert TokenStore(tmp_path / "tokens.json").load() is not None
 
 
 def test_browser_that_blocks_until_it_exits(tmp_path):

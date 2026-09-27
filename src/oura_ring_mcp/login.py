@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import errno
 import secrets
 import socket
 import threading
@@ -22,7 +21,6 @@ from oura_ring_mcp.core.tokens import TokenStore
 
 _LOCAL_HOSTS = {"localhost", "127.0.0.1"}
 _TIMEOUT_SECONDS = 300
-_NO_IPV6 = {errno.EADDRNOTAVAIL, errno.EAFNOSUPPORT}
 
 _DONE_PAGE = (
     b"<!doctype html><meta charset=utf-8><title>oura-ring-mcp</title>"
@@ -49,7 +47,7 @@ def code_from_redirect(url: str, state: str) -> str:
 
 def _catches_locally(redirect_uri: str) -> bool:
     parts = urlsplit(redirect_uri)
-    return parts.scheme == "http" and parts.hostname in _LOCAL_HOSTS and parts.port is not None
+    return parts.scheme == "http" and parts.hostname in _LOCAL_HOSTS and bool(parts.port)
 
 
 def _loopback_addresses(host: str) -> list[tuple[str, socket.AddressFamily]]:
@@ -77,15 +75,17 @@ class _RedirectCatcher:
         self.parts = urlsplit(redirect_uri)
         self.captured: str | None = None
         self.done = threading.Event()
+        self._lock = threading.Lock()
         self._servers: list[_LoopbackServer] = []
         port = self.parts.port or 80
         try:
             for host, family in _loopback_addresses(self.parts.hostname or "localhost"):
                 try:
                     self._servers.append(_LoopbackServer((host, port), family, self))
-                except OSError as exc:
-                    # No IPv6 on this machine: IPv4 alone is enough.
-                    if family is socket.AF_INET6 and exc.errno in _NO_IPV6:
+                except OSError:
+                    # ::1 unavailable (no IPv6, or taken by another program): the IPv4
+                    # listener is enough, and `--paste` covers a browser that insists on ::1.
+                    if family is socket.AF_INET6:
                         continue
                     raise
         except OSError:
@@ -112,6 +112,13 @@ class _RedirectCatcher:
         for server in self._servers:
             server.server_close()
 
+    def record(self, url: str) -> None:
+        """Keep the first redirect; a reload or retry must not replace its code."""
+        with self._lock:
+            if self.captured is None:
+                self.captured = url
+                self.done.set()
+
     def wait(self, timeout: float) -> str:
         if not self.done.wait(timeout) or self.captured is None:
             raise LoginError("Timed out waiting for the Oura sign-in to finish.")
@@ -127,12 +134,12 @@ class _Handler(BaseHTTPRequestHandler):
         if urlsplit(self.path).path != (parts.path or "/"):
             self.send_error(404)  # e.g. the browser asking for /favicon.ico
             return
+        # Record first: the code must survive the browser dropping the connection.
+        catcher.record(f"{parts.scheme}://{parts.netloc}{self.path}")
         self.send_response(200)
         self.send_header("content-type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(_DONE_PAGE)
-        catcher.captured = f"{parts.scheme}://{parts.netloc}{self.path}"
-        catcher.done.set()
 
     def log_message(self, *args: object) -> None:
         pass  # stdout/stderr stay clean

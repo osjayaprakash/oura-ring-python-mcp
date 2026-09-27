@@ -9,6 +9,7 @@ from oura_ring_mcp.core import (
     AuthenticationError,
     AuthorizationError,
     Collection,
+    MissingScopeError,
     NetworkError,
     RateLimitError,
     ResponseShapeError,
@@ -67,7 +68,12 @@ async def test_heart_rate_uses_resolved_window():
 @pytest.mark.parametrize(
     "error, message",
     [
-        (AuthenticationError("401"), "run `oura-ring-mcp auth` to sign in again."),
+        (AuthenticationError("401"), "Run `oura-ring-mcp auth` to sign in again."),
+        (
+            MissingScopeError("stress"),
+            "Allow `stress` for the application (and in OURA_SCOPES if you set it), "
+            "then run `oura-ring-mcp auth` again.",
+        ),
         (
             AuthorizationError("invalid_grant"),
             "(invalid_grant). Run `oura-ring-mcp auth` to sign in again.",
@@ -94,7 +100,7 @@ async def test_errors_are_mapped_for_every_call():
     client.fail_next["personal_info"] = [AuthenticationError("401")]
     client.fail_next["heart_rate"] = [AccessDeniedError("403")]
     service = make_service(client)
-    with pytest.raises(ToolError, match="OURA_ACCESS_TOKEN"):
+    with pytest.raises(ToolError, match="sign in again"):
         await service.personal_info()
     with pytest.raises(ToolError, match="denied access"):
         await service.heart_rate(None, None)

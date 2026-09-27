@@ -176,10 +176,6 @@ async def get_heart_rate(
 
 
 def build_client(settings: Settings) -> OuraClient:
-    if not settings.uses_oauth:
-        assert settings.access_token is not None
-        return OuraClient(settings.access_token)
-    assert settings.client_id and settings.client_secret
     oauth = OuraOAuth(
         settings.client_id, settings.client_secret, settings.redirect_uri, scopes=settings.scopes
     )
@@ -214,7 +210,7 @@ _AUTH_HINTS = {
 
 def _auth(paste: bool) -> None:
     try:
-        run_login(load_settings(oauth_only=True), paste=paste, out=sys.stderr)
+        run_login(load_settings(), paste=paste, out=sys.stderr)
     except AuthorizationError as exc:
         _fail(f"{exc}. {_AUTH_HINTS.get(exc.reason, '')}".rstrip())
     except (ConfigError, LoginError, OuraError) as exc:
@@ -233,7 +229,7 @@ def main(argv: list[str] | None = None) -> None:
         settings = load_settings()
     except ConfigError as exc:
         _fail(exc)
-    if settings.uses_oauth and not settings.token_file.exists():
+    if not settings.token_file.exists():
         _fail(f"Not signed in to Oura (no {settings.token_file}). Run `oura-ring-mcp auth` first.")
 
     tracing.configure(settings)

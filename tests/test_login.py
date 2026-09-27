@@ -29,8 +29,7 @@ def settings_for(tmp_path, redirect_uri):
             "OURA_CLIENT_SECRET": "csecret",
             "OURA_REDIRECT_URI": redirect_uri,
             "OURA_TOKEN_FILE": str(tmp_path / "tokens.json"),
-        },
-        oauth_only=True,
+        }
     )
 
 

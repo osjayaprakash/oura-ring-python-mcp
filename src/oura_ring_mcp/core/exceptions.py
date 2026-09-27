@@ -20,6 +20,14 @@ class AuthorizationError(OuraError):
         super().__init__(f"Oura authorization failed: {reason}")
 
 
+class MissingScopeError(OuraError):
+    """The sign-in wasn't granted the OAuth scope this data needs; `scope` names it."""
+
+    def __init__(self, scope: str) -> None:
+        self.scope = scope
+        super().__init__(f"Token lacks the {scope} scope")
+
+
 class AccessDeniedError(OuraError):
     """HTTP 403: membership lapsed, or the token lacks the scope for this data."""
 

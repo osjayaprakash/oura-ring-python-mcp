@@ -6,7 +6,7 @@ import pytest
 from oura_ring_mcp import tracing
 from oura_ring_mcp.config import load_settings
 
-CREDS = {"OURA_ACCESS_TOKEN": "tok"}
+CREDS = {"OURA_CLIENT_ID": "cid", "OURA_CLIENT_SECRET": "csecret"}
 LANGFUSE = {"LANGFUSE_PUBLIC_KEY": "pk", "LANGFUSE_SECRET_KEY": "sk"}
 
 

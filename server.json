@@ -35,11 +35,6 @@
           "name": "OURA_TOKEN_FILE",
           "description": "Where `oura-ring-mcp auth` saved the OAuth tokens",
           "default": "~/.config/oura-ring-mcp/tokens.json"
-        },
-        {
-          "name": "OURA_ACCESS_TOKEN",
-          "description": "Instead of OAuth: a fixed bearer token (legacy personal access token)",
-          "isSecret": true
         }
       ]
     },
@@ -65,11 +60,6 @@
           "name": "OURA_TOKEN_FILE",
           "description": "Where `oura-ring-mcp auth` saved the OAuth tokens",
           "default": "~/.config/oura-ring-mcp/tokens.json"
-        },
-        {
-          "name": "OURA_ACCESS_TOKEN",
-          "description": "Instead of OAuth: a fixed bearer token (legacy personal access token)",
-          "isSecret": true
         }
       ]
     }

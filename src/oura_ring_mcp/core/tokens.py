@@ -26,7 +26,7 @@ class TokenSource(Protocol):
 
 
 class StaticToken:
-    """A token used as given (a legacy personal access token, or an OAuth access token)."""
+    """A token used as given, never refreshed (tests and one-off scripts)."""
 
     can_refresh = False
 

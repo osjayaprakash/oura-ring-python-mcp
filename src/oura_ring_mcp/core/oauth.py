@@ -20,8 +20,17 @@ from oura_ring_mcp.core.exceptions import (
 AUTHORIZE_URL = "https://cloud.ouraring.com/oauth/authorize"
 TOKEN_URL = "https://api.ouraring.com/oauth/token"
 
-# Everything the tools read. Stress and resilience come under `daily`.
-DEFAULT_SCOPES = ("email", "personal", "daily", "heartrate", "workout", "session", "spo2")
+# Everything the tools read. Resilience needs `stress`, which Oura's scope list omits.
+DEFAULT_SCOPES = (
+    "email",
+    "personal",
+    "daily",
+    "heartrate",
+    "workout",
+    "session",
+    "spo2",
+    "stress",
+)
 
 
 class TokenSet(BaseModel):

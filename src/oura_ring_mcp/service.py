@@ -17,6 +17,7 @@ from oura_ring_mcp.core import (
     AuthorizationError,
     Collection,
     HeartRateSample,
+    MissingScopeError,
     NetworkError,
     PersonalInfo,
     RateLimitError,
@@ -111,10 +112,15 @@ def _to_tool_error(exc: Exception) -> ToolError | None:
             f"Oura sign-in is missing or no longer valid ({exc.reason}). "
             "Run `oura-ring-mcp auth` to sign in again."
         )
+    if isinstance(exc, MissingScopeError):
+        return ToolError(
+            f"The Oura sign-in doesn't include the `{exc.scope}` scope this data needs. "
+            f"Allow `{exc.scope}` for the application (and in OURA_SCOPES if you set it), "
+            "then run `oura-ring-mcp auth` again."
+        )
     if isinstance(exc, AuthenticationError):
         return ToolError(
-            "Oura rejected the access token. If you set OURA_ACCESS_TOKEN, check it; "
-            "otherwise run `oura-ring-mcp auth` to sign in again."
+            "Oura rejected the access token. Run `oura-ring-mcp auth` to sign in again."
         )
     if isinstance(exc, AccessDeniedError):
         return ToolError(

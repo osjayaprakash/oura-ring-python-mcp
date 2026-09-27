@@ -108,8 +108,6 @@ def run_login(
     timeout: float = _TIMEOUT_SECONDS,
 ) -> Path:
     """Run the browser sign-in and save the tokens. Returns the token file path."""
-    if not (settings.client_id and settings.client_secret):
-        raise LoginError("Set OURA_CLIENT_ID and OURA_CLIENT_SECRET.")
     oauth = OuraOAuth(
         settings.client_id,
         settings.client_secret,

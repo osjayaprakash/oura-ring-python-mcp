@@ -8,6 +8,7 @@ from oura_ring_mcp.core import (
     APIError,
     AuthenticationError,
     Collection,
+    MissingScopeError,
     NetworkError,
     RateLimitError,
     ResponseShapeError,
@@ -216,3 +217,31 @@ async def test_static_token_401_is_not_retried():
         with pytest.raises(AuthenticationError):
             await client.personal_info()
     assert len(api.requests) == 1
+
+
+async def test_missing_scope_401_names_the_scope_and_does_not_refresh():
+    api = MockAPI()
+    api.on(
+        "GET",
+        "/v2/usercollection/daily_resilience",
+        status=401,
+        json_body={"detail": "Token is not authorized access stress scope."},
+    )
+    auth = RefreshingToken()
+    async with OuraClient(auth, transport=api.transport()) as client:
+        with pytest.raises(MissingScopeError) as info:
+            await client.documents(Collection.DAILY_RESILIENCE, START, END)
+    assert info.value.scope == "stress"
+    assert auth.refreshes == 0 and len(api.requests) == 1
+
+
+@pytest.mark.parametrize("body", [{"detail": "Invalid token"}, {"detail": 5}, ["x"], None])
+async def test_other_401_bodies_are_plain_authentication_errors(body):
+    api = MockAPI()
+    if body is None:
+        api.on("GET", PERSONAL_INFO, status=401, text="nope")
+    else:
+        api.on("GET", PERSONAL_INFO, status=401, json_body=body)
+    async with make_client(api) as client:
+        with pytest.raises(AuthenticationError):
+            await client.personal_info()

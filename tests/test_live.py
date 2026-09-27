@@ -1,17 +1,27 @@
-"""Hits the real Oura API. Run with: uv run pytest -m live"""
+"""Hits the real Oura API. Run with: uv run pytest -m live
 
-import os
+Needs OURA_CLIENT_ID and OURA_CLIENT_SECRET, and `oura-ring-mcp auth` run first.
+"""
 
 import pytest
 from mcp import Client
 
 from oura_ring_mcp import server
-from oura_ring_mcp.config import load_settings
+from oura_ring_mcp.config import ConfigError, load_settings
 from oura_ring_mcp.service import OuraService
+
+
+def _ready() -> bool:
+    try:
+        settings = load_settings()
+    except ConfigError:
+        return False
+    return settings.token_file.exists()
+
 
 pytestmark = [
     pytest.mark.live,
-    pytest.mark.skipif(not os.environ.get("OURA_ACCESS_TOKEN"), reason="needs OURA_ACCESS_TOKEN"),
+    pytest.mark.skipif(not _ready(), reason="not signed in (see module docstring)"),
 ]
 
 

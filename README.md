@@ -48,7 +48,9 @@ Full documentation is at <https://oura-ring-mcp.readthedocs.io>.
 
 The server signs in with OAuth2, since Oura has deprecated personal access tokens. You
 need an Oura API application (a client ID and secret) whose redirect URIs include
-`http://localhost:47651/callback`. Gen3 and Oura Ring 4 users need an active Oura
+`http://localhost:47651/callback`, with the scopes `email`, `personal`, `daily`,
+`heartrate`, `workout`, `session`, `spo2` and `stress` allowed (resilience needs
+`stress`). Gen3 and Oura Ring 4 users need an active Oura
 membership for the API to return data.
 
 ```bash
@@ -73,8 +75,7 @@ or the saved refresh token is lost.
 | `OURA_CLIENT_SECRET` | yes | | Client secret of your Oura API application |
 | `OURA_TOKEN_FILE` | no | `~/.config/oura-ring-mcp/tokens.json` | Where `auth` saves the tokens and the server reads them |
 | `OURA_REDIRECT_URI` | no | `http://localhost:47651/callback` | Must match a redirect URI of the application exactly |
-| `OURA_SCOPES` | no | `email personal daily heartrate workout session spo2` | Scopes to request |
-| `OURA_ACCESS_TOKEN` | no | | Instead of OAuth: a fixed bearer token, such as an existing personal access token. Takes precedence when set |
+| `OURA_SCOPES` | no | `email personal daily heartrate workout session spo2 stress` | Scopes to request |
 
 If the redirect URI isn't `http://localhost:<port>/...` (or you're signing in over SSH
 or in Docker), `auth` asks you to paste the URL the browser ended up on instead; force
@@ -164,7 +165,7 @@ as a self-hosted one.
 ```bash
 uv sync
 uv run pytest            # offline suite
-uv run pytest -m live    # hits the real API; needs `auth` first (or OURA_ACCESS_TOKEN)
+uv run pytest -m live    # hits the real API; needs `auth` first
 uv run ruff check src tests && uv run ruff format --check src tests
 ```
 

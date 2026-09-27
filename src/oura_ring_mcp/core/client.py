@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from datetime import date, datetime
 from typing import Any, TypeVar
@@ -14,6 +15,7 @@ from oura_ring_mcp.core.exceptions import (
     AccessDeniedError,
     APIError,
     AuthenticationError,
+    MissingScopeError,
     NetworkError,
     RateLimitError,
     ResponseShapeError,
@@ -27,6 +29,9 @@ BASE_URL = "https://api.ouraring.com"
 MAX_PAGES = 50
 
 _SAMPLES = TypeAdapter(list[HeartRateSample])
+
+# Oura answers a missing scope with 401 and e.g. "Token is not authorized access stress scope."
+_MISSING_SCOPE = re.compile(r"not authorized access (\w+) scope")
 
 T = TypeVar("T")
 
@@ -88,6 +93,8 @@ class OuraClient:
 
     async def _get(self, path: str, params: dict[str, str], call: str) -> Any:
         response = await self._send(path, params, refresh=False)
+        if response.status_code == 401 and (scope := _missing_scope(response)):
+            raise MissingScopeError(scope)  # a new token wouldn't help: don't burn a refresh
         if response.status_code == 401 and self._auth.can_refresh:
             # Revoked or expired early: refresh once and retry.
             response = await self._send(path, params, refresh=True)
@@ -113,6 +120,15 @@ class OuraClient:
             )
         except httpx2.TransportError as exc:
             raise NetworkError(type(exc).__name__) from exc
+
+
+def _missing_scope(response: httpx2.Response) -> str | None:
+    try:
+        detail = response.json().get("detail")
+    except (ValueError, AttributeError):
+        return None
+    match = _MISSING_SCOPE.search(detail) if isinstance(detail, str) else None
+    return match.group(1) if match else None
 
 
 def _parse(call: str, build: Callable[[], T]) -> T:

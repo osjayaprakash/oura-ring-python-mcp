@@ -6,7 +6,6 @@ from mcp import Client
 
 from oura_ring_mcp import server
 from oura_ring_mcp.core import Collection
-from oura_ring_mcp.core.client import OuraClient
 from oura_ring_mcp.service import OuraService
 from tests.fakes import FakeOuraClient
 
@@ -91,7 +90,7 @@ async def test_tool_error_is_reported_not_raised(fake_client):
 
 
 def _clear_oura_env(monkeypatch):
-    for name in ("OURA_ACCESS_TOKEN", "OURA_CLIENT_ID", "OURA_CLIENT_SECRET", "OURA_TOKEN_FILE"):
+    for name in ("OURA_CLIENT_ID", "OURA_CLIENT_SECRET", "OURA_TOKEN_FILE"):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -102,7 +101,7 @@ async def test_main_exits_when_nothing_configured(monkeypatch, capsys):
     assert info.value.code == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "OURA_CLIENT_ID" in captured.err and "OURA_ACCESS_TOKEN" in captured.err
+    assert "OURA_CLIENT_ID, OURA_CLIENT_SECRET" in captured.err
 
 
 async def test_main_exits_when_oauth_not_signed_in(monkeypatch, capsys, tmp_path):
@@ -120,7 +119,6 @@ async def test_main_exits_when_oauth_not_signed_in(monkeypatch, capsys, tmp_path
 
 async def test_auth_command_needs_client_credentials(monkeypatch, capsys):
     _clear_oura_env(monkeypatch)
-    monkeypatch.setenv("OURA_ACCESS_TOKEN", "tok")
     with pytest.raises(SystemExit) as info:
         server.main(["auth"])
     assert info.value.code == 1
@@ -155,17 +153,6 @@ async def test_auth_command_runs_login(monkeypatch):
     )
     server.main(["auth", "--paste"])
     assert seen == {"paste": True}
-
-
-async def test_build_client_with_access_token():
-    from oura_ring_mcp.config import load_settings
-    from oura_ring_mcp.core.tokens import StaticToken
-
-    client = server.build_client(load_settings({"OURA_ACCESS_TOKEN": "tok"}))
-    assert isinstance(client, OuraClient)
-    assert isinstance(client._auth, StaticToken)
-    assert await client._auth.get() == "tok"
-    await client.aclose()
 
 
 async def test_build_client_with_oauth(tmp_path):

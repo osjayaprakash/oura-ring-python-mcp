@@ -1,0 +1,21 @@
+site_name: oura-ring-mcp
+site_description: MCP server exposing Oura Ring sleep, readiness, activity and heart rate data
+repo_url: https://github.com/osjayaprakash/oura-ring-mcp
+docs_dir: documentation
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Installation: install.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.snippets:
+      check_paths: true

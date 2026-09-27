@@ -1,0 +1,47 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.osjayaprakash/oura-ring-mcp",
+  "title": "Oura Ring",
+  "description": "Read-only Oura Ring sleep, readiness, activity, stress and heart rate data",
+  "websiteUrl": "https://oura-ring-mcp.readthedocs.io",
+  "repository": {
+    "url": "https://github.com/osjayaprakash/oura-ring-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "oura-ring-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OURA_ACCESS_TOKEN",
+          "description": "Oura personal access token (or OAuth2 access token)",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    },
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/osjayaprakash/oura-ring-mcp:0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OURA_ACCESS_TOKEN",
+          "description": "Oura personal access token (or OAuth2 access token)",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

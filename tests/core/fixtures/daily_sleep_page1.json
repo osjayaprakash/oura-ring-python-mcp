@@ -1,0 +1,4 @@
+{"data": [
+  {"id": "ds-1", "day": "2026-09-24", "score": 82, "timestamp": "2026-09-24T00:00:00+00:00",
+   "contributors": {"deep_sleep": 90, "efficiency": 88, "latency": 70, "rem_sleep": 85, "restfulness": 76, "timing": 95, "total_sleep": 80}}
+], "next_token": "page-2"}

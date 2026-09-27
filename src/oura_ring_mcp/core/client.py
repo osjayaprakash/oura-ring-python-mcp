@@ -19,6 +19,7 @@ from oura_ring_mcp.core.exceptions import (
     ResponseShapeError,
 )
 from oura_ring_mcp.core.models import HeartRateSample, Page, PersonalInfo
+from oura_ring_mcp.core.tokens import StaticToken, TokenSource
 
 BASE_URL = "https://api.ouraring.com"
 
@@ -33,15 +34,16 @@ T = TypeVar("T")
 class OuraClient:
     def __init__(
         self,
-        access_token: str,
+        auth: str | TokenSource,
         *,
         base_url: str = BASE_URL,
         transport: httpx2.AsyncBaseTransport | None = None,
         timeout: float = 15.0,
     ) -> None:
+        self._auth = StaticToken(auth) if isinstance(auth, str) else auth
         self._http = httpx2.AsyncClient(
             base_url=base_url,
-            headers={"authorization": f"Bearer {access_token}", "accept": "application/json"},
+            headers={"accept": "application/json"},
             transport=transport,
             timeout=timeout,
         )
@@ -85,10 +87,10 @@ class OuraClient:
         raise ResponseShapeError(call)
 
     async def _get(self, path: str, params: dict[str, str], call: str) -> Any:
-        try:
-            response = await self._http.get(path, params=params)
-        except httpx2.TransportError as exc:
-            raise NetworkError(type(exc).__name__) from exc
+        response = await self._send(path, params, refresh=False)
+        if response.status_code == 401 and self._auth.can_refresh:
+            # Revoked or expired early: refresh once and retry.
+            response = await self._send(path, params, refresh=True)
         if response.status_code == 401:
             raise AuthenticationError("Oura returned HTTP 401")
         if response.status_code == 403:
@@ -102,6 +104,15 @@ class OuraClient:
             return response.json()
         except ValueError:
             raise ResponseShapeError(call) from None
+
+    async def _send(self, path: str, params: dict[str, str], *, refresh: bool) -> httpx2.Response:
+        token = await self._auth.get(refresh=refresh)
+        try:
+            return await self._http.get(
+                path, params=params, headers={"authorization": f"Bearer {token}"}
+            )
+        except httpx2.TransportError as exc:
+            raise NetworkError(type(exc).__name__) from exc
 
 
 def _parse(call: str, build: Callable[[], T]) -> T:

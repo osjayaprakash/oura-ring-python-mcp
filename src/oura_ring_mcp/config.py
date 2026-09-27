@@ -5,8 +5,13 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
+
+from oura_ring_mcp.core.oauth import DEFAULT_SCOPES
 
 _TRUTHY = {"true", "1", "yes"}
+
+DEFAULT_REDIRECT_URI = "http://localhost:47651/callback"
 
 
 class ConfigError(Exception):
@@ -15,18 +20,53 @@ class ConfigError(Exception):
 
 @dataclass(frozen=True)
 class Settings:
-    access_token: str = field(repr=False)
+    # OURA_ACCESS_TOKEN, if set, is used as-is; otherwise OAuth client credentials are.
+    access_token: str | None = field(repr=False)
+    client_id: str | None
+    client_secret: str | None = field(repr=False)
+    redirect_uri: str
+    scopes: tuple[str, ...]
+    token_file: Path
     langfuse_enabled: bool
     langfuse_capture_data: bool
 
+    @property
+    def uses_oauth(self) -> bool:
+        return self.access_token is None
 
-def load_settings(env: Mapping[str, str] | None = None) -> Settings:
-    """Build Settings from `env` (defaults to os.environ). Raises ConfigError."""
+
+def _default_token_file(env: Mapping[str, str]) -> Path:
+    config_home = env.get("XDG_CONFIG_HOME", "").strip()
+    base = Path(config_home) if config_home else Path.home() / ".config"
+    return base / "oura-ring-mcp" / "tokens.json"
+
+
+def load_settings(env: Mapping[str, str] | None = None, *, oauth_only: bool = False) -> Settings:
+    """Build Settings from `env` (defaults to os.environ). Raises ConfigError.
+
+    `oauth_only` requires client credentials even when OURA_ACCESS_TOKEN is set
+    (the `auth` command needs them).
+    """
     env = os.environ if env is None else env
 
-    access_token = env.get("OURA_ACCESS_TOKEN", "").strip()
-    if not access_token:
-        raise ConfigError("Missing required environment variable(s): OURA_ACCESS_TOKEN")
+    access_token = env.get("OURA_ACCESS_TOKEN", "").strip() or None
+    client_id = env.get("OURA_CLIENT_ID", "").strip() or None
+    client_secret = env.get("OURA_CLIENT_SECRET", "").strip() or None
+    if oauth_only or access_token is None:
+        credentials = (("OURA_CLIENT_ID", client_id), ("OURA_CLIENT_SECRET", client_secret))
+        missing = [name for name, value in credentials if not value]
+        if missing:
+            alternative = "" if oauth_only else " (or set OURA_ACCESS_TOKEN)"
+            raise ConfigError(
+                f"Missing required environment variable(s): {', '.join(missing)}{alternative}"
+            )
+    if oauth_only:
+        access_token = None
+
+    redirect_uri = env.get("OURA_REDIRECT_URI", "").strip() or DEFAULT_REDIRECT_URI
+    scopes = tuple(env.get("OURA_SCOPES", "").replace(",", " ").split()) or DEFAULT_SCOPES
+    token_file_text = env.get("OURA_TOKEN_FILE", "").strip()
+    token_file = Path(token_file_text).expanduser() if token_file_text else _default_token_file(env)
 
     langfuse_enabled = bool(
         env.get("LANGFUSE_PUBLIC_KEY", "").strip() and env.get("LANGFUSE_SECRET_KEY", "").strip()
@@ -35,6 +75,11 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
 
     return Settings(
         access_token=access_token,
+        client_id=client_id,
+        client_secret=client_secret,
+        redirect_uri=redirect_uri,
+        scopes=scopes,
+        token_file=token_file,
         langfuse_enabled=langfuse_enabled,
         langfuse_capture_data=capture,
     )

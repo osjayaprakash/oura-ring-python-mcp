@@ -90,20 +90,95 @@ async def test_tool_error_is_reported_not_raised(fake_client):
     assert "longer than 90 days" in result.content[0].text
 
 
-async def test_main_exits_on_missing_token(monkeypatch, capsys):
-    monkeypatch.delenv("OURA_ACCESS_TOKEN", raising=False)
+def _clear_oura_env(monkeypatch):
+    for name in ("OURA_ACCESS_TOKEN", "OURA_CLIENT_ID", "OURA_CLIENT_SECRET", "OURA_TOKEN_FILE"):
+        monkeypatch.delenv(name, raising=False)
+
+
+async def test_main_exits_when_nothing_configured(monkeypatch, capsys):
+    _clear_oura_env(monkeypatch)
     with pytest.raises(SystemExit) as info:
-        server.main()
+        server.main([])
     assert info.value.code == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "OURA_ACCESS_TOKEN" in captured.err
+    assert "OURA_CLIENT_ID" in captured.err and "OURA_ACCESS_TOKEN" in captured.err
 
 
-async def test_build_client_uses_token():
+async def test_main_exits_when_oauth_not_signed_in(monkeypatch, capsys, tmp_path):
+    _clear_oura_env(monkeypatch)
+    monkeypatch.setenv("OURA_CLIENT_ID", "cid")
+    monkeypatch.setenv("OURA_CLIENT_SECRET", "csecret")
+    monkeypatch.setenv("OURA_TOKEN_FILE", str(tmp_path / "tokens.json"))
+    with pytest.raises(SystemExit) as info:
+        server.main([])
+    assert info.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Run `oura-ring-mcp auth` first" in captured.err
+
+
+async def test_auth_command_needs_client_credentials(monkeypatch, capsys):
+    _clear_oura_env(monkeypatch)
+    monkeypatch.setenv("OURA_ACCESS_TOKEN", "tok")
+    with pytest.raises(SystemExit) as info:
+        server.main(["auth"])
+    assert info.value.code == 1
+    assert "OURA_CLIENT_ID" in capsys.readouterr().err
+
+
+async def test_auth_command_explains_oauth_errors(monkeypatch, capsys):
+    from oura_ring_mcp.core import AuthorizationError
+
+    _clear_oura_env(monkeypatch)
+    monkeypatch.setenv("OURA_CLIENT_ID", "cid")
+    monkeypatch.setenv("OURA_CLIENT_SECRET", "csecret")
+
+    def reject(settings, *, paste, out):
+        raise AuthorizationError("invalid_client")
+
+    monkeypatch.setattr(server, "run_login", reject)
+    with pytest.raises(SystemExit) as info:
+        server.main(["auth"])
+    assert info.value.code == 1
+    err = capsys.readouterr().err
+    assert "invalid_client. Check OURA_CLIENT_ID and OURA_CLIENT_SECRET." in err
+
+
+async def test_auth_command_runs_login(monkeypatch):
+    _clear_oura_env(monkeypatch)
+    monkeypatch.setenv("OURA_CLIENT_ID", "cid")
+    monkeypatch.setenv("OURA_CLIENT_SECRET", "csecret")
+    seen = {}
+    monkeypatch.setattr(
+        server, "run_login", lambda settings, *, paste, out: seen.update(paste=paste)
+    )
+    server.main(["auth", "--paste"])
+    assert seen == {"paste": True}
+
+
+async def test_build_client_with_access_token():
     from oura_ring_mcp.config import load_settings
+    from oura_ring_mcp.core.tokens import StaticToken
 
     client = server.build_client(load_settings({"OURA_ACCESS_TOKEN": "tok"}))
     assert isinstance(client, OuraClient)
-    assert client._http.headers["authorization"] == "Bearer tok"
+    assert isinstance(client._auth, StaticToken)
+    assert await client._auth.get() == "tok"
+    await client.aclose()
+
+
+async def test_build_client_with_oauth(tmp_path):
+    from oura_ring_mcp.config import load_settings
+    from oura_ring_mcp.core.tokens import OAuthTokens
+
+    settings = load_settings(
+        {
+            "OURA_CLIENT_ID": "cid",
+            "OURA_CLIENT_SECRET": "csecret",
+            "OURA_TOKEN_FILE": str(tmp_path / "t.json"),
+        }
+    )
+    client = server.build_client(settings)
+    assert isinstance(client._auth, OAuthTokens)
     await client.aclose()

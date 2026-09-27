@@ -7,6 +7,7 @@ from oura_ring_mcp.core import (
     AccessDeniedError,
     APIError,
     AuthenticationError,
+    AuthorizationError,
     Collection,
     NetworkError,
     RateLimitError,
@@ -66,7 +67,11 @@ async def test_heart_rate_uses_resolved_window():
 @pytest.mark.parametrize(
     "error, message",
     [
-        (AuthenticationError("401"), "Check OURA_ACCESS_TOKEN; it may be expired or revoked."),
+        (AuthenticationError("401"), "run `oura-ring-mcp auth` to sign in again."),
+        (
+            AuthorizationError("invalid_grant"),
+            "(invalid_grant). Run `oura-ring-mcp auth` to sign in again.",
+        ),
         (AccessDeniedError("403"), "or the token lacks the scope for it."),
         (RateLimitError(30), "Try again in 30 seconds."),
         (RateLimitError(None), "Try again later."),

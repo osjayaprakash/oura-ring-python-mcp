@@ -172,3 +172,47 @@ async def test_aclose_closes_http_client():
     client = make_client(MockAPI())
     await client.aclose()
     assert client._http.is_closed
+
+
+class RefreshingToken:
+    can_refresh = True
+
+    def __init__(self):
+        self.refreshes = 0
+
+    async def get(self, *, refresh=False):
+        self.refreshes += refresh
+        return f"token-{self.refreshes}"
+
+
+async def test_401_refreshes_once_and_retries():
+    api = MockAPI()
+    api.on("GET", PERSONAL_INFO, status=401, json_body={})
+    api.on("GET", PERSONAL_INFO, json_body=fixture("personal_info"))
+    auth = RefreshingToken()
+    async with OuraClient(auth, transport=api.transport()) as client:
+        info = await client.personal_info()
+    assert info.id == "user-0001"
+    assert [r.headers["authorization"] for r in api.requests] == [
+        "Bearer token-0",
+        "Bearer token-1",
+    ]
+
+
+async def test_second_401_after_refresh_is_surfaced():
+    api = MockAPI()
+    api.on("GET", PERSONAL_INFO, status=401, json_body={})
+    auth = RefreshingToken()
+    async with OuraClient(auth, transport=api.transport()) as client:
+        with pytest.raises(AuthenticationError):
+            await client.personal_info()
+    assert auth.refreshes == 1 and len(api.requests) == 2
+
+
+async def test_static_token_401_is_not_retried():
+    api = MockAPI()
+    api.on("GET", PERSONAL_INFO, status=401, json_body={})
+    async with make_client(api) as client:
+        with pytest.raises(AuthenticationError):
+            await client.personal_info()
+    assert len(api.requests) == 1

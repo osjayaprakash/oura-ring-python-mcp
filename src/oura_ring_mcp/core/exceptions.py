@@ -11,6 +11,15 @@ class AuthenticationError(OuraError):
     """The access token is missing, invalid, expired or revoked (HTTP 401)."""
 
 
+class AuthorizationError(OuraError):
+    """OAuth sign-in is missing, or Oura rejected the code or refresh token; `reason` is
+    the OAuth error code (e.g. invalid_grant)."""
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(f"Oura authorization failed: {reason}")
+
+
 class AccessDeniedError(OuraError):
     """HTTP 403: membership lapsed, or the token lacks the scope for this data."""
 

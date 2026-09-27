@@ -1,7 +1,7 @@
 # Installing oura-ring-mcp
 
 This guide takes you from nothing to asking Claude "how did I sleep last night?". It takes
-about 10 minutes.
+about 15 minutes, most of it creating the Oura application.
 
 ## 1. Prerequisites
 
@@ -24,14 +24,26 @@ about 10 minutes.
 
 - **An MCP client**, such as Claude Desktop or Claude Code.
 
-## 2. Get an Oura access token
+## 2. Create an Oura API application
 
-1. Sign in at <https://cloud.ouraring.com/personal-access-tokens> with your Oura account.
-2. Create a new personal access token and copy it. Treat it like a password: it can read
-   all of your Oura data.
+Oura has deprecated personal access tokens, so this server signs in with OAuth2 using an
+application you register. Only you will use it, so the details can be simple.
 
-If you have your own Oura OAuth2 application, an access token from it works too; the
-server sends whatever `OURA_ACCESS_TOKEN` holds as a bearer token.
+1. Open Oura's developer portal from <https://cloud.ouraring.com/oauth/applications>
+   (new applications are created in the new portal it links to) and sign in with your
+   Oura account.
+2. Create an application. For the website and privacy/terms URLs, your GitHub profile
+   or this repository's URL is fine.
+3. Add this **redirect URI** exactly as written:
+
+   ```
+   http://localhost:47651/callback
+   ```
+
+4. Allow the scopes `email`, `personal`, `daily`, `heartrate`, `workout`, `session`
+   and `spo2`.
+5. Save, then note the **client ID** and **client secret**. Treat the secret like a
+   password.
 
 ## 3. Download and install
 
@@ -47,23 +59,50 @@ Note the full path of this folder; you'll need it below:
 pwd
 ```
 
-## 4. Check your token
-
-Before connecting a client, confirm the server can read data:
+## 4. Sign in to Oura
 
 ```bash
-OURA_ACCESS_TOKEN='your-token' uv run pytest -m live -q
+OURA_CLIENT_ID='your-client-id' \
+OURA_CLIENT_SECRET='your-client-secret' \
+uv run oura-ring-mcp auth
+```
+
+Your browser opens Oura's sign-in page. Sign in and allow access; the page then says
+"Oura sign-in received", and the command prints where it saved the tokens
+(`~/.config/oura-ring-mcp/tokens.json`, readable only by you).
+
+You only do this once: the server renews the access token by itself. Each renewal
+replaces the saved refresh token (Oura's are single-use), so don't copy the token file
+between machines and use both copies; sign in on each machine instead.
+
+Signing in over SSH, in Docker, or with a redirect URI that isn't on `localhost`? Add
+`--paste`: after allowing access, copy the address the browser ended up on (it may show
+a "can't connect" page; that's fine) and paste it into the terminal.
+
+Then confirm the server can read your data:
+
+```bash
+OURA_CLIENT_ID='your-client-id' OURA_CLIENT_SECRET='your-client-secret' \
+uv run pytest -m live -q
 ```
 
 `1 passed` means it works. If it fails, the error message tells you what to fix; see
 [Troubleshooting](#troubleshooting).
 
-On Windows (PowerShell), set the variable first:
+On Windows (PowerShell), set the variables first:
 
 ```powershell
-$env:OURA_ACCESS_TOKEN = "your-token"
+$env:OURA_CLIENT_ID = "your-client-id"
+$env:OURA_CLIENT_SECRET = "your-client-secret"
+uv run oura-ring-mcp auth
 uv run pytest -m live -q
 ```
+
+### Still have a personal access token?
+
+Existing personal access tokens work until Oura shuts them off. To use one instead of
+OAuth, set `OURA_ACCESS_TOKEN` and skip the application and sign-in steps. It takes
+precedence over the client credentials when set.
 
 ## 5. Connect your client
 
@@ -91,7 +130,8 @@ uv run pytest -m live -q
          "command": "/Users/you/.local/bin/uv",
          "args": ["--directory", "/Users/you/oura-ring-mcp", "run", "oura-ring-mcp"],
          "env": {
-           "OURA_ACCESS_TOKEN": "your-token"
+           "OURA_CLIENT_ID": "your-client-id",
+           "OURA_CLIENT_SECRET": "your-client-secret"
          }
        }
      }
@@ -108,7 +148,8 @@ uv run pytest -m live -q
 
 ```bash
 claude mcp add oura \
-  -e OURA_ACCESS_TOKEN=your-token \
+  -e OURA_CLIENT_ID=your-client-id \
+  -e OURA_CLIENT_SECRET=your-client-secret \
   -- uv --directory /Users/you/oura-ring-mcp run oura-ring-mcp
 ```
 
@@ -117,7 +158,8 @@ it available in every project. Check it with `claude mcp list`.
 
 ### Other MCP clients
 
-Run this command with `OURA_ACCESS_TOKEN` set; it speaks MCP over stdio:
+Run this command with `OURA_CLIENT_ID` and `OURA_CLIENT_SECRET` set; it speaks MCP over
+stdio:
 
 ```bash
 uv --directory /path/to/oura-ring-mcp run oura-ring-mcp
@@ -152,9 +194,15 @@ instance you trust, such as a self-hosted one.
 
 | Message | What to do |
 |---|---|
-| `Missing required environment variable(s): OURA_ACCESS_TOKEN` | The client isn't passing the token. Check the `env` block (Claude Desktop) or `-e` flag (Claude Code). |
-| `Oura rejected the access token…` | The token is wrong, expired or revoked. Create a new one (step 2). |
-| `Oura denied access to this data…` | Check the Oura membership is active, and that an OAuth token was granted the scope for this data. |
+| `Missing required environment variable(s): OURA_CLIENT_ID …` | The client isn't passing the credentials. Check the `env` block (Claude Desktop) or `-e` flags (Claude Code). |
+| `Not signed in to Oura (no …tokens.json). Run \`oura-ring-mcp auth\` first.` | Do step 4 with the same `OURA_TOKEN_FILE` (if you set one) as the client config. |
+| The Oura page says the redirect URI is invalid | The application's redirect URIs must include `http://localhost:47651/callback` exactly (or whatever `OURA_REDIRECT_URI` is). |
+| `Cannot listen on http://localhost:47651/callback …` | Something else uses port 47651. Stop it, or add another redirect URI to the application with a free port and set `OURA_REDIRECT_URI` to it, or use `auth --paste`. |
+| `Oura did not authorize access: access_denied.` | You clicked deny on Oura's page. Run `auth` again and allow access. |
+| `Oura sign-in is missing or no longer valid (invalid_grant)…` | The saved refresh token was revoked, already used by another copy of the token file, or expired. Run `oura-ring-mcp auth` again. |
+| `Oura sign-in is missing or no longer valid (invalid_client)…` | The client ID or secret is wrong. Copy them again from the developer portal. |
+| `Oura rejected the access token…` | With `OURA_ACCESS_TOKEN`: the token is wrong or was shut off; switch to OAuth. Otherwise run `auth` again. |
+| `Oura denied access to this data…` | Check the Oura membership is active, and that you allowed that scope when signing in (run `auth` again to change). |
 | `Rate limited by Oura…` | Wait for the time shown, then retry. |
 | `… is not a date; use YYYY-MM-DD.` | Ask with explicit dates, e.g. "sleep from 2026-09-01 to 2026-09-07". |
 | `Date range is longer than 90 days…` | Ask for a shorter range, or several in turn. |
@@ -176,10 +224,13 @@ Then restart your MCP client.
 
 1. Remove the `oura` entry from `claude_desktop_config.json`, or run
    `claude mcp remove oura`.
-2. Delete the `oura-ring-mcp` folder.
-3. Revoke the token at <https://cloud.ouraring.com/personal-access-tokens>.
+2. Delete the `oura-ring-mcp` folder and `~/.config/oura-ring-mcp/`.
+3. Revoke the application's access in your Oura account settings, or delete the
+   application in the developer portal.
 
-## A note on your token
+## A note on your secrets
 
-The client config stores the access token in plain text, readable by anyone who can read
-that file. Revoke it from the Oura website if it leaks.
+The client config stores the client secret in plain text, readable by anyone who can
+read that file, and the token file holds a refresh token that grants access to your Oura
+data. The token file is created readable only by you; keep it that way, and revoke the
+application's access if either leaks.

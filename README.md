@@ -42,13 +42,13 @@ averages are kept.
 
 ## Setup
 
-For a step-by-step guide, including getting a token and troubleshooting, see the
-[installation guide](https://oura-ring-mcp.readthedocs.io/en/latest/install/).
+For a step-by-step guide, including creating the Oura application and troubleshooting,
+see the [installation guide](https://oura-ring-mcp.readthedocs.io/en/latest/install/).
 Full documentation is at <https://oura-ring-mcp.readthedocs.io>.
 
-You need an Oura access token. Create a personal access token at
-<https://cloud.ouraring.com/personal-access-tokens>, or use the access token of an Oura
-OAuth2 application you've authorised. Gen3 and Oura Ring 4 users need an active Oura
+The server signs in with OAuth2, since Oura has deprecated personal access tokens. You
+need an Oura API application (a client ID and secret) whose redirect URIs include
+`http://localhost:47651/callback`. Gen3 and Oura Ring 4 users need an active Oura
 membership for the API to return data.
 
 ```bash
@@ -56,15 +56,36 @@ git clone https://github.com/osjayaprakash/oura-ring-mcp.git && cd oura-ring-mcp
 uv sync
 ```
 
-| Variable | Required | Meaning |
-|---|---|---|
-| `OURA_ACCESS_TOKEN` | yes | Oura personal access token (or OAuth2 access token) |
+Sign in once. This opens the browser, catches Oura's redirect on localhost, and saves
+the tokens to `~/.config/oura-ring-mcp/tokens.json` (readable only by you):
+
+```bash
+OURA_CLIENT_ID=... OURA_CLIENT_SECRET=... uv run oura-ring-mcp auth
+```
+
+From then on the server refreshes the access token by itself (Oura's last about a day)
+and saves each new single-use refresh token. Run `auth` again only if you revoke access
+or the saved refresh token is lost.
+
+| Variable | Required | Default | Meaning |
+|---|---|---|---|
+| `OURA_CLIENT_ID` | yes | | Client ID of your Oura API application |
+| `OURA_CLIENT_SECRET` | yes | | Client secret of your Oura API application |
+| `OURA_TOKEN_FILE` | no | `~/.config/oura-ring-mcp/tokens.json` | Where `auth` saves the tokens and the server reads them |
+| `OURA_REDIRECT_URI` | no | `http://localhost:47651/callback` | Must match a redirect URI of the application exactly |
+| `OURA_SCOPES` | no | `email personal daily heartrate workout session spo2` | Scopes to request |
+| `OURA_ACCESS_TOKEN` | no | | Instead of OAuth: a fixed bearer token, such as an existing personal access token. Takes precedence when set |
+
+If the redirect URI isn't `http://localhost:<port>/...` (or you're signing in over SSH
+or in Docker), `auth` asks you to paste the URL the browser ended up on instead; force
+that with `auth --paste`.
 
 ### Run from PyPI
 
 No clone needed; [uv](https://docs.astral.sh/uv/) fetches and runs the published package:
 
 ```bash
+OURA_CLIENT_ID=... OURA_CLIENT_SECRET=... uvx oura-ring-mcp auth   # once
 uvx oura-ring-mcp
 ```
 
@@ -72,14 +93,20 @@ In a client config, use `"command": "uvx", "args": ["oura-ring-mcp"]`.
 
 ### Run with Docker
 
-The server speaks MCP over stdio, so keep `-i`:
+Sign in on the host first (above), then mount the token folder so the container can
+read the tokens and save refreshed ones. The server speaks MCP over stdio, so keep `-i`:
 
 ```bash
-docker run -i --rm -e OURA_ACCESS_TOKEN ghcr.io/osjayaprakash/oura-ring-mcp:latest
+docker run -i --rm --user "$(id -u):$(id -g)" \
+  -e OURA_CLIENT_ID -e OURA_CLIENT_SECRET -e OURA_TOKEN_FILE=/tokens/tokens.json \
+  -v ~/.config/oura-ring-mcp:/tokens \
+  ghcr.io/osjayaprakash/oura-ring-mcp:latest
 ```
 
+To sign in from the container instead, run it with `-it` and the command `auth --paste`.
+
 In a client config, use `"command": "docker"` with those arguments, and pass the
-variable through the client's `env` block.
+variables through the client's `env` block.
 
 ### Claude Desktop
 
@@ -92,7 +119,8 @@ Add to `claude_desktop_config.json`:
       "command": "uv",
       "args": ["--directory", "/absolute/path/to/oura-ring-mcp", "run", "oura-ring-mcp"],
       "env": {
-        "OURA_ACCESS_TOKEN": "your-token"
+        "OURA_CLIENT_ID": "your-client-id",
+        "OURA_CLIENT_SECRET": "your-client-secret"
       }
     }
   }
@@ -103,7 +131,8 @@ Add to `claude_desktop_config.json`:
 
 ```bash
 claude mcp add oura \
-  -e OURA_ACCESS_TOKEN=your-token \
+  -e OURA_CLIENT_ID=your-client-id \
+  -e OURA_CLIENT_SECRET=your-client-secret \
   -- uv --directory /absolute/path/to/oura-ring-mcp run oura-ring-mcp
 ```
 
@@ -135,7 +164,7 @@ as a self-hosted one.
 ```bash
 uv sync
 uv run pytest            # offline suite
-uv run pytest -m live    # hits the real API; needs OURA_ACCESS_TOKEN
+uv run pytest -m live    # hits the real API; needs `auth` first (or OURA_ACCESS_TOKEN)
 uv run ruff check src tests && uv run ruff format --check src tests
 ```
 

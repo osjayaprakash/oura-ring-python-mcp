@@ -23,8 +23,15 @@ async def test_live_personal_info_and_daily_sleep():
             info = await mcp_client.call_tool("get_personal_info", {})
             assert not info.is_error, info.content
             assert info.structured_content["id"]
-            sleep = await mcp_client.call_tool("get_daily_sleep", {})
-            assert not sleep.is_error, sleep.content
-            assert sleep.structured_content["count"] >= 0
+            for tool in (
+                "get_daily_sleep",
+                "get_sleep_periods",
+                "get_daily_readiness",
+                "get_daily_activity",
+                "get_heart_rate",
+            ):
+                result = await mcp_client.call_tool(tool, {})
+                assert not result.is_error, (tool, result.content)
+                assert result.structured_content["count"] >= 0
     finally:
         server.set_service(None)

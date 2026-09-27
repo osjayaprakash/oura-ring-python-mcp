@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import atexit
 import logging
 import sys
@@ -13,8 +14,11 @@ from pydantic import Field
 
 from oura_ring_mcp import formatting, tracing
 from oura_ring_mcp.config import ConfigError, Settings, load_settings
-from oura_ring_mcp.core import Collection
+from oura_ring_mcp.core import AuthorizationError, Collection, OuraError
 from oura_ring_mcp.core.client import OuraClient
+from oura_ring_mcp.core.oauth import OuraOAuth
+from oura_ring_mcp.core.tokens import OAuthTokens, TokenStore
+from oura_ring_mcp.login import LoginError, run_login
 from oura_ring_mcp.service import OuraService
 
 mcp = MCPServer(
@@ -172,17 +176,65 @@ async def get_heart_rate(
 
 
 def build_client(settings: Settings) -> OuraClient:
-    return OuraClient(settings.access_token)
+    if not settings.uses_oauth:
+        assert settings.access_token is not None
+        return OuraClient(settings.access_token)
+    assert settings.client_id and settings.client_secret
+    oauth = OuraOAuth(
+        settings.client_id, settings.client_secret, settings.redirect_uri, scopes=settings.scopes
+    )
+    return OuraClient(OAuthTokens(oauth, TokenStore(settings.token_file)))
 
 
-def main() -> None:
+def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="oura-ring-mcp", description="MCP server for Oura Ring data (stdio)."
+    )
+    commands = parser.add_subparsers(dest="command")
+    auth = commands.add_parser("auth", help="sign in to Oura in the browser and save tokens")
+    auth.add_argument(
+        "--paste",
+        action="store_true",
+        help="paste the redirect URL instead of catching it on localhost (Docker, SSH)",
+    )
+    return parser.parse_args(argv)
+
+
+def _fail(message: object) -> None:
+    print(f"oura-ring-mcp: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+_AUTH_HINTS = {
+    "invalid_client": "Check OURA_CLIENT_ID and OURA_CLIENT_SECRET.",
+    "invalid_grant": "The sign-in code expired or was already used; run `auth` again.",
+    "invalid_request": "Check that OURA_REDIRECT_URI matches the application's redirect URI.",
+}
+
+
+def _auth(paste: bool) -> None:
+    try:
+        run_login(load_settings(oauth_only=True), paste=paste, out=sys.stderr)
+    except AuthorizationError as exc:
+        _fail(f"{exc}. {_AUTH_HINTS.get(exc.reason, '')}".rstrip())
+    except (ConfigError, LoginError, OuraError) as exc:
+        _fail(exc)
+
+
+def main(argv: list[str] | None = None) -> None:
     # stdout carries the MCP protocol; every log line must go to stderr.
     logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
+    args = _parse_args(argv)
+    if args.command == "auth":
+        _auth(args.paste)
+        return
+
     try:
         settings = load_settings()
     except ConfigError as exc:
-        print(f"oura-ring-mcp: {exc}", file=sys.stderr)
-        sys.exit(1)
+        _fail(exc)
+    if settings.uses_oauth and not settings.token_file.exists():
+        _fail(f"Not signed in to Oura (no {settings.token_file}). Run `oura-ring-mcp auth` first.")
 
     tracing.configure(settings)
     atexit.register(tracing.shutdown)

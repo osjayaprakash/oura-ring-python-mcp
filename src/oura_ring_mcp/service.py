@@ -14,6 +14,7 @@ from oura_ring_mcp.core import (
     AccessDeniedError,
     APIError,
     AuthenticationError,
+    AuthorizationError,
     Collection,
     HeartRateSample,
     NetworkError,
@@ -105,9 +106,15 @@ def resolve_time_range(start: str | None, end: str | None, *, now: datetime) -> 
 
 def _to_tool_error(exc: Exception) -> ToolError | None:
     """Translate an Oura client error into a user-facing ToolError."""
+    if isinstance(exc, AuthorizationError):
+        return ToolError(
+            f"Oura sign-in is missing or no longer valid ({exc.reason}). "
+            "Run `oura-ring-mcp auth` to sign in again."
+        )
     if isinstance(exc, AuthenticationError):
         return ToolError(
-            "Oura rejected the access token. Check OURA_ACCESS_TOKEN; it may be expired or revoked."
+            "Oura rejected the access token. If you set OURA_ACCESS_TOKEN, check it; "
+            "otherwise run `oura-ring-mcp auth` to sign in again."
         )
     if isinstance(exc, AccessDeniedError):
         return ToolError(
